@@ -81,6 +81,7 @@
      <Hints>
        <ReaderFactory extensions="tpy"
                       file_description="Tipsy Files" />
+       <RepresentationType view="RenderView" type="Points" />
      </Hints>
    </SourceProxy>
 
