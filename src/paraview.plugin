@@ -1,0 +1,7 @@
+NAME
+  pvTipsyReader
+DESCRIPTION
+  Reader for visualization of Tipsy data
+REQUIRES_MODULES
+  VTK::CommonCore
+  VTK::CommonExecutionModel

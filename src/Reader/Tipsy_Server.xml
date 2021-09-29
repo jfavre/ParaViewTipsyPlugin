@@ -1,0 +1,88 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="sources">
+    <SourceProxy name="Tipsy" class="vtkTipsyReader" label="Tipsy reader">
+     <StringVectorProperty
+        name="FileName"
+        command="SetFileName"
+        number_of_elements="1">
+        <FileListDomain name="files"/>
+     </StringVectorProperty>
+<!--
+     <IntVectorProperty command="SetParticleType"
+                         default_values="3"
+                         name="ParticleType"
+                         number_of_elements="1">
+        <EnumerationDomain name="enum">
+          <Entry text="Gas"
+                 value="0" />
+          <Entry text="Dark Matter"
+                 value="1" />
+          <Entry text="Stars"
+                 value="2" />
+          <Entry text="All Particles"
+                 value="3" />
+        </EnumerationDomain>
+     </IntVectorProperty>
+-->     
+     <StringVectorProperty
+        name="ParticleTypeInfo"
+        information_only="1">
+        <ArraySelectionInformationHelper attribute_name="ParticleType"/>
+     </StringVectorProperty>
+
+     <StringVectorProperty
+        name="ParticleType"
+        command="SetParticleTypeArrayStatus"
+        number_of_elements="0"
+        repeat_command="1"
+        number_of_elements_per_command="2"
+        element_types="2 0"
+        information_property="ParticleTypeInfo">
+       <ArraySelectionDomain name="array_list">
+          <RequiredProperties>
+             <Property name="ParticleTypeInfo" function="ArrayList"/>
+          </RequiredProperties>
+       </ArraySelectionDomain>
+     </StringVectorProperty>
+
+     <StringVectorProperty
+        name="PointArrayInfo"
+        information_only="1">
+        <ArraySelectionInformationHelper attribute_name="Point"/>
+     </StringVectorProperty>
+     
+     <StringVectorProperty
+        name="PointArrayStatus"
+        command="SetPointArrayStatus"
+        number_of_elements="0"
+        repeat_command="1"
+        number_of_elements_per_command="2"
+        element_types="2 0"
+        information_property="PointArrayInfo">
+       <ArraySelectionDomain name="array_list">
+          <RequiredProperties>
+             <Property name="PointArrayInfo" function="ArrayList"/>
+          </RequiredProperties>
+       </ArraySelectionDomain>
+     </StringVectorProperty>
+
+     <IntVectorProperty
+        name="GenerateVertexCells"
+        command="SetGenerateVertexCells"
+        number_of_elements="1"
+        default_values="1"
+        label="GenerateVertexCells?">
+      <BooleanDomain name="bool" />
+      <Documentation>
+            Will add a Poly-vertex cell.
+      </Documentation>
+     </IntVectorProperty>
+
+     <Hints>
+       <ReaderFactory extensions="tpy"
+                      file_description="Tipsy Files" />
+     </Hints>
+   </SourceProxy>
+
+  </ProxyGroup>
+</ServerManagerConfiguration>	

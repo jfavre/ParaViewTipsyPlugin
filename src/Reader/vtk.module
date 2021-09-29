@@ -1,0 +1,13 @@
+NAME
+  TipsyReader
+LIBRARY_NAME
+  TipsyReader
+DEPENDS
+  VTK::CommonCore
+  VTK::CommonExecutionModel
+  VTK::FiltersGeometry
+  VTK::InteractionStyle
+  VTK::RenderingCore
+  VTK::RenderingOpenGL2
+PRIVATE_DEPENDS
+  VTK::vtksys
