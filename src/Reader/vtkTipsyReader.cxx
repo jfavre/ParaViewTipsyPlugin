@@ -158,7 +158,7 @@ int vtkTipsyReader::RequestInformation(
 
   outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(), &this->Tipsyfile->h.time, 1);
   outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
-  
+  this->CloseFile();
   return 1;
 }
 
@@ -528,7 +528,7 @@ int vtkTipsyReader::RequestData(
     {
     return 0;
     }
-
+  this->Tipsyfile->read_header();
   int n[3] = {0,0,0};
 
   if(this->ParticleType == TIPSY_TYPE_GAS)
