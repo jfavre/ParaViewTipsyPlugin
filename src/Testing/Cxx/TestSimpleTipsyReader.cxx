@@ -17,21 +17,25 @@ VTK_MODULE_INIT(vtkInteractionStyle);
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
-#include "vtkSmartPointer.h"
 #include "vtkUnstructuredGrid.h"
 
 #include <vtksys/SystemTools.hxx>
 #include <vtksys/CommandLineArguments.hxx>
 
-#define VTK_CREATE(type, var) \
-  vtkSmartPointer<type> var = vtkSmartPointer<type>::New();
+#include <map>
+
+std::map<std::string, int> my_map = {
+    { "Gas", 0 },
+    { "Dark", 1 },
+    { "Star", 2 }
+};
 
 int
-main(int argc, char **argv)
+vtkIOTipsyCxxTests(int argc, char **argv)
 {
   std::string filein;
   std::string varname, partname;
-  bool vis;
+  bool vis = 0;
 
   double TimeStep = 0.0;
   int k, BlockIndex = 0;
@@ -52,21 +56,21 @@ main(int argc, char **argv)
     cerr << "\nTestSimpleGadgetReader: Written by Jean M. Favre\n"
          << "options are:\n";
     cerr << args.GetHelp() << "\n";
-    exit(1);
+    return EXIT_FAILURE;
     }
 
   if(!vtksys::SystemTools::FileExists(filein.c_str()))
     {
     cerr << "\nFile " << filein.c_str() << " does not exist\n\n";
-    exit(1);
+    return EXIT_FAILURE;
     }
 
-  vtkTipsyReader *reader = vtkTipsyReader::New();
+  vtkNew<vtkTipsyReader> reader;
   reader->DebugOff();
   reader->SetFileName(filein.c_str());
   reader->UpdateInformation();
-  reader->DisableAllParticleTypes();
-  reader->SetParticleTypeArrayStatus(partname.c_str(), 1);
+  //reader->DisableAllParticleTypes();
+  reader->SetParticleType(my_map[partname]);
   
   for(auto i=0; i < reader->GetNumberOfPointArrays(); i++)
     cout << "found array (" << i << ") = " << reader->GetPointArrayName(i) << endl;
@@ -77,7 +81,8 @@ main(int argc, char **argv)
   reader->Update();
 
   double range[2];
-  vtkDataSet *FirstBlock = static_cast<vtkDataSet *>(reader->GetOutput()->GetBlock(0));
+      
+  vtkDataSet *FirstBlock = static_cast<vtkDataSet *>(reader->GetOutput()->GetBlock(my_map[partname]));
   if(varname.size())
     {
     FirstBlock->GetPointData()->GetArray(0)->GetRange(range);
@@ -94,7 +99,7 @@ main(int argc, char **argv)
   
 if(vis)
   {
-  VTK_CREATE(vtkLookupTable, lut);
+  vtkNew<vtkLookupTable> lut;
   lut->SetHueRange(0.66,0.0);
   lut->SetNumberOfTableValues(256);
   lut->SetScaleToLog10();
@@ -106,11 +111,11 @@ if(vis)
     lut->Build();
     }
 
-  VTK_CREATE(vtkGeometryFilter, geom1);
+  vtkNew<vtkGeometryFilter> geom1;
   geom1->SetInputData(FirstBlock);
   geom1->Update();
   
-  VTK_CREATE(vtkPolyDataMapper, mapper1);
+  vtkNew<vtkPolyDataMapper> mapper1;
   mapper1->SetInputConnection(geom1->GetOutputPort(0));
   mapper1->ScalarVisibilityOn();
   mapper1->SetScalarModeToUsePointFieldData();
@@ -121,12 +126,12 @@ if(vis)
     mapper1->SetLookupTable(lut);
     mapper1->UseLookupTableScalarRangeOn();
     }
-  VTK_CREATE(vtkActor, actor1);
+  vtkNew<vtkActor> actor1;
   actor1->SetMapper(mapper1);
 
-  VTK_CREATE(vtkRenderer, ren);
-  VTK_CREATE(vtkRenderWindow, renWin);
-  VTK_CREATE(vtkRenderWindowInteractor, iren);
+  vtkNew<vtkRenderer> ren;
+  vtkNew<vtkRenderWindow> renWin;
+  vtkNew<vtkRenderWindowInteractor> iren;
 
   iren->SetRenderWindow(renWin);
   renWin->AddRenderer(ren);
@@ -140,5 +145,12 @@ if(vis)
 
   iren->Start();
   }
-  reader->Delete();
+  return EXIT_SUCCESS;
 }
+
+int
+main(int argc, char **argv)
+{
+  vtkIOTipsyCxxTests(argc, argv);
+}
+

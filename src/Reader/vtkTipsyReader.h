@@ -21,7 +21,11 @@ class vtkDataArraySelection;
 class vtkStdString;
 class vtkMultiProcessController;
 
-enum class particleType {Gas=0, Dark=1, Star=2, All=3};
+//enum class particleType {Gas=0, Dark=1, Star=2, All=3};
+#define TIPSY_TYPE_GAS 0
+#define TIPSY_TYPE_DARK 1
+#define TIPSY_TYPE_STAR 2
+#define TIPSY_TYPE_ALL 3
 static std::vector<std::string> ParticleTypes = {"Gas", "Dark", "Star"};
 
 class vtkTipsyReader : public vtkMultiBlockDataSetAlgorithm
@@ -39,9 +43,16 @@ public:
   vtkSetMacro(TimeStep,int);
   vtkGetMacro(TimeStep,int);
 
-  //vtkSetMacro( ParticleType, int );
-  //vtkGetMacro( ParticleType, int );
-
+  vtkSetClampMacro(ParticleType, int, TIPSY_TYPE_GAS, TIPSY_TYPE_ALL);
+  vtkGetMacro(ParticleType, int);
+  void SetParticleTypeToGas() { this->SetParticleType(TIPSY_TYPE_GAS); }
+  void SetParticleTypeToDark() { this->SetParticleType(TIPSY_TYPE_DARK); }
+  void SetParticleTypeToStar() { this->SetParticleType(TIPSY_TYPE_STAR); }
+  void SetParticleTypeToAll() { this->SetParticleType(TIPSY_TYPE_ALL); }
+  
+  //vtkSetEnumMacro(ParticleType, particleType);
+  //vtkGetEnumMacro(ParticleType, particleType);
+  
   // Description:
   // When set (default no), the reader will generate a vertex cell
   // for each point/particle read. When using the points directly
@@ -54,9 +65,9 @@ public:
   vtkBooleanMacro(GenerateVertexCells, int);
 
   int         GetNumberOfParticleTypeArrays() { return 3; }
-  const char* GetParticleTypeArrayName(int index);
-  int         GetParticleTypeArrayStatus(const char* name);
-  void        SetParticleTypeArrayStatus(const char* name, int status);
+  //const char* GetParticleTypeArrayName(int index);
+  //int         GetParticleTypeArrayStatus(const char* name);
+  //void        SetParticleTypeArrayStatus(const char* name, int status);
   void        EnableAllParticleTypes();
   void        DisableAllParticleTypes();
 
@@ -108,7 +119,7 @@ protected:
   vtkTimeStamp  FileOpenedTime;
   int           UpdatePiece;
   int           UpdateNumPieces;
-  //int           ParticleType;
+  int           ParticleType;
 
   typedef std::vector<std::string>  stringlist;
   std::vector<stringlist>           FieldArrays;
@@ -116,7 +127,7 @@ protected:
   // To allow paraview gui to enable/disable scalar reading
   vtkDataArraySelection* PointDataArraySelection;
   // To allow paraview gui to enable/disable block (particle type) selective reading
-  vtkDataArraySelection* ParticleTypeSelection;
+  // vtkDataArraySelection* ParticleTypeSelection;
 
   #ifdef PARAVIEW_USE_MPI
   vtkMultiProcessController* Controller;
