@@ -1,56 +1,19 @@
 <ServerManagerConfiguration>
-  <ProxyGroup name="sources">
-    <SourceProxy name="Tipsy" class="vtkTipsyReader" label="Tipsy reader">
+  <ProxyGroup name="internal_sources">
+    <Proxy name="TipsyReaderCore" class="vtkTipsyReader" label="Tipsy SPH data reader">
      <StringVectorProperty
         name="FileName"
         command="SetFileName"
         number_of_elements="1">
         <FileListDomain name="files"/>
      </StringVectorProperty>
-<!--
-     <IntVectorProperty command="SetParticleType"
-                         default_values="3"
-                         name="ParticleType"
-                         number_of_elements="1">
-        <EnumerationDomain name="enum">
-          <Entry text="Gas"
-                 value="0" />
-          <Entry text="Dark Matter"
-                 value="1" />
-          <Entry text="Stars"
-                 value="2" />
-          <Entry text="All Particles"
-                 value="3" />
-        </EnumerationDomain>
-     </IntVectorProperty>
--->     
-     <StringVectorProperty
-        name="ParticleTypeInfo"
-        information_only="1">
-        <ArraySelectionInformationHelper attribute_name="ParticleType"/>
-     </StringVectorProperty>
-
-     <StringVectorProperty
-        name="ParticleType"
-        command="SetParticleTypeArrayStatus"
-        number_of_elements="0"
-        repeat_command="1"
-        number_of_elements_per_command="2"
-        element_types="2 0"
-        information_property="ParticleTypeInfo">
-       <ArraySelectionDomain name="array_list">
-          <RequiredProperties>
-             <Property name="ParticleTypeInfo" function="ArrayList"/>
-          </RequiredProperties>
-       </ArraySelectionDomain>
-     </StringVectorProperty>
-
+     
      <StringVectorProperty
         name="PointArrayInfo"
         information_only="1">
         <ArraySelectionInformationHelper attribute_name="Point"/>
      </StringVectorProperty>
-     
+
      <StringVectorProperty
         name="PointArrayStatus"
         command="SetPointArrayStatus"
@@ -65,6 +28,18 @@
           </RequiredProperties>
        </ArraySelectionDomain>
      </StringVectorProperty>
+     
+     <IntVectorProperty command="SetParticleType"
+                         default_values="3"
+                         name="ParticleType"
+                         number_of_elements="1">
+        <EnumerationDomain name="enum">
+          <Entry text="Gas"           value="0" />
+          <Entry text="Dark Matter"   value="1" />
+          <Entry text="Stars"         value="2" />
+          <Entry text="All Particles" value="3" />
+        </EnumerationDomain>
+     </IntVectorProperty>
 
      <IntVectorProperty
         name="GenerateVertexCells"
@@ -77,13 +52,70 @@
             Will add a Poly-vertex cell.
       </Documentation>
      </IntVectorProperty>
-
-     <Hints>
-       <ReaderFactory extensions="tpy"
-                      file_description="Tipsy Files" />
-       <RepresentationType view="RenderView" type="Points" />
-     </Hints>
-   </SourceProxy>
+     
+      <StringVectorProperty animateable="0"
+                            command="SetFileName"
+                            name="FileName"
+                            number_of_elements="1"
+                            panel_visibility="never">
+        <FileListDomain name="files" />
+        <Documentation>
+          A tipsy file for SPH data.
+        </Documentation>
+      </StringVectorProperty>
+   </Proxy>
 
   </ProxyGroup>
+  
+      <ProxyGroup name="sources">
+        <SourceProxy class="vtkFileSeriesReader"
+                 file_name_method="SetFileName"
+                 label="Tipsy Series Reader"
+                 name="TipsySeriesReader"
+                 si_class="vtkSIMetaReaderProxy">
+      <Documentation long_help="Reads a series of Tipsy files"
+                     short_help="Reads a series of Tipsy files.">The raw series
+                     reader reads raw files. The output is a time sequence of
+                     dataset.</Documentation>
+      <StringVectorProperty animateable="0"
+                            clean_command="RemoveAllFileNames"
+                            command="AddFileName"
+                            name="FileNames"
+                            number_of_elements="1"
+                            panel_visibility="never"
+                            repeat_command="1">
+        <FileListDomain name="files" />
+        <Documentation>The list of files to be read by the reader. If more than
+        one file is specified, the reader will switch to file series mode in
+        which it will pretend that it can support time and provide one file per
+        time step.</Documentation>
+      </StringVectorProperty>
+       
+      <DoubleVectorProperty information_only="1"
+                            name="TimestepValues"
+                            repeatable="1">
+        <TimeStepsInformationHelper />
+        <Documentation>Available timestep values.</Documentation>
+      </DoubleVectorProperty>
+   
+      <SubProxy>
+        <Proxy name="Reader"
+               proxygroup="internal_sources"
+               proxyname="TipsyReaderCore"></Proxy>
+               
+      <ExposedProperties>
+         <Property name="PointArrayStatus"/>
+         <Property name="ParticleType"/>
+         <Property name="GenerateVertexCells"/>
+      </ExposedProperties>
+      </SubProxy>
+
+      <Hints>
+        <ReaderFactory extensions="tpy"
+                       file_description="Tipsy binary files" />
+	    <RepresentationType view="RenderView" type="Points" />
+      </Hints>
+      <!-- End RAWSeriesReader -->
+    </SourceProxy>
+    </ProxyGroup>
 </ServerManagerConfiguration>	

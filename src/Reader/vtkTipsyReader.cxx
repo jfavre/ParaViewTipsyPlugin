@@ -44,7 +44,7 @@ vtkTipsyReader::vtkTipsyReader()
 {
   this->SetNumberOfInputPorts(0);
   this->Tipsyfile                = nullptr;
-  //this->ParticleType             = static_cast<int>(particleType::All); // all particles
+  this->SetParticleTypeToGas();
   this->TimeStep                 = 0;
   this->ActualTimeStep           = 0;
   this->GenerateVertexCells      = 1;
@@ -52,7 +52,7 @@ vtkTipsyReader::vtkTipsyReader()
   this->UpdatePiece              = 0;
   this->UpdateNumPieces          = 0;
   this->PointDataArraySelection  = vtkDataArraySelection::New();
-  this->ParticleTypeSelection    = vtkDataArraySelection::New();
+  //this->ParticleTypeSelection    = vtkDataArraySelection::New();
 #ifdef PARAVIEW_USE_MPI
   this->Controller = nullptr;
   this->SetController(vtkMultiProcessController::GetGlobalController());
@@ -68,8 +68,8 @@ vtkTipsyReader::~vtkTipsyReader()
   this->PointDataArraySelection->Delete();
   this->PointDataArraySelection = 0;
   
-  this->ParticleTypeSelection->Delete();
-  this->ParticleTypeSelection = 0;
+  //this->ParticleTypeSelection->Delete();
+  //this->ParticleTypeSelection = 0;
 
 #ifdef PARAVIEW_USE_MPI
   this->SetController(nullptr);
@@ -145,11 +145,7 @@ int vtkTipsyReader::RequestInformation(
 
   this->Tipsyfile->read_header();
   bool CanReadFile = this->Tipsyfile->report_header();
-  
-  this->ParticleTypeSelection->AddArray("Dark Matter");
-  this->ParticleTypeSelection->AddArray("Gas");
-  this->ParticleTypeSelection->AddArray("Stars");
-  
+
   this->PointDataArraySelection->AddArray("mass");
   this->PointDataArraySelection->AddArray("vel");
   this->PointDataArraySelection->AddArray("rho");
@@ -158,12 +154,17 @@ int vtkTipsyReader::RequestInformation(
   this->PointDataArraySelection->AddArray("metals");
   this->PointDataArraySelection->AddArray("phi");
   
+  double timeRange[2] = {this->Tipsyfile->h.time, this->Tipsyfile->h.time};
+
+  outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(), &this->Tipsyfile->h.time, 1);
+  outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
+  
   return 1;
 }
 
 void  vtkTipsyReader::Read_Gas(vtkMultiBlockDataSet *mb, int N)
 {
-  int myType = static_cast<int>(particleType::Gas);
+  int myType = TIPSY_TYPE_GAS;
   vtkPolyData *output = vtkPolyData::New();
   mb->SetBlock(myType, output);
   mb->GetMetaData(myType)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[myType]);
@@ -297,7 +298,7 @@ void  vtkTipsyReader::Read_Gas(vtkMultiBlockDataSet *mb, int N)
 
 void  vtkTipsyReader::Read_DarkMatter(vtkMultiBlockDataSet *mb, int N)
 {
-  int myType = static_cast<int>(particleType::Dark);
+  int myType = TIPSY_TYPE_DARK;
 
   vtkPolyData *output = vtkPolyData::New();
   mb->SetBlock(myType, output);
@@ -398,7 +399,7 @@ void  vtkTipsyReader::Read_DarkMatter(vtkMultiBlockDataSet *mb, int N)
 
 void  vtkTipsyReader::Read_Stars(vtkMultiBlockDataSet *mb, int N)
 {
-  int myType = static_cast<int>(particleType::Star);
+  int myType = TIPSY_TYPE_STAR;
 
   vtkPolyData *output = vtkPolyData::New();
   mb->SetBlock(myType, output);
@@ -530,22 +531,37 @@ int vtkTipsyReader::RequestData(
 
   int n[3] = {0,0,0};
 
-  if(this->GetParticleTypeArrayStatus("Gas"))
+  if(this->ParticleType == TIPSY_TYPE_GAS)
     {
     n[0] = 1;
     this->Tipsyfile->read_gas_piece(this->UpdatePiece, this->UpdateNumPieces, n[0]);
     this->Read_Gas(mb, n[0]);
     this->Tipsyfile->Free_Sph_Buffer();
     }
- if(this->GetParticleTypeArrayStatus("Dark Matter"))
+ else if(this->ParticleType == TIPSY_TYPE_DARK)
     {
     n[1] = 1;
     this->Tipsyfile->read_dark_matter_piece(this->UpdatePiece, this->UpdateNumPieces, n[1]);
     this->Read_DarkMatter(mb, n[1]);
     this->Tipsyfile->Free_Dark_Buffer();
     }
-  if(this->GetParticleTypeArrayStatus("Stars"))
+  else if(this->ParticleType == TIPSY_TYPE_STAR)
     {
+    n[2] = 1;
+    this->Tipsyfile->read_star_piece(this->UpdatePiece, this->UpdateNumPieces, n[2]);
+    this->Read_Stars(mb, n[2]);
+    this->Tipsyfile->Free_Star_Buffer();
+    }
+  else if(this->ParticleType == TIPSY_TYPE_ALL)
+    {
+    n[0] = 1;
+    this->Tipsyfile->read_gas_piece(this->UpdatePiece, this->UpdateNumPieces, n[0]);
+    this->Read_Gas(mb, n[0]);
+    this->Tipsyfile->Free_Sph_Buffer();
+    n[1] = 1;
+    this->Tipsyfile->read_dark_matter_piece(this->UpdatePiece, this->UpdateNumPieces, n[1]);
+    this->Read_DarkMatter(mb, n[1]);
+    this->Tipsyfile->Free_Dark_Buffer();
     n[2] = 1;
     this->Tipsyfile->read_star_piece(this->UpdatePiece, this->UpdateNumPieces, n[2]);
     this->Read_Stars(mb, n[2]);
@@ -557,42 +573,6 @@ int vtkTipsyReader::RequestData(
 
 //----------------------------------------------------------------------------
 
-const char* vtkTipsyReader::GetParticleTypeArrayName(int index)
-{
-  return this->ParticleTypeSelection->GetArrayName(index);
-}
-
-int vtkTipsyReader::GetParticleTypeArrayStatus(const char* name)
-{
-  return this->ParticleTypeSelection->ArrayIsEnabled(name);
-}
-
-void vtkTipsyReader::SetParticleTypeArrayStatus(const char* name, int status)
-{
-  if (status != this->GetParticleTypeArrayStatus(name))
-    {
-    if (status)
-      {
-      this->ParticleTypeSelection->EnableArray(name);
-      }
-    else
-      {
-      this->ParticleTypeSelection->DisableArray(name);
-      }
-    this->Modified();
-    }
-}
-
-void vtkTipsyReader::EnableAllParticleTypes()
-{
-    this->ParticleTypeSelection->EnableAllArrays();
-}
-
-void vtkTipsyReader::DisableAllParticleTypes()
-{
-    this->ParticleTypeSelection->DisableAllArrays();
-}
-//----------------------------------------------------------------------------
 
 const char* vtkTipsyReader::GetPointArrayName(int index)
 {
