@@ -34,7 +34,7 @@ vtkCxxSetObjectMacro(vtkTipsyReader, Controller, vtkMultiProcessController);
 
 #include <algorithm>
 #include <functional>
-
+#include <numeric>
 #include "tipsy_file.h"
 
 //----------------------------------------------------------------------------
@@ -287,8 +287,7 @@ void  vtkTipsyReader::Read_Gas(vtkMultiBlockDataSet *mb, int N)
     vtkIdList *list = vtkIdList::New();
     std::cerr << __LINE__ << ": Allocating ID list of size "<< N << "*" << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType) << " bytes\n";
     list->SetNumberOfIds(N);
-    for(vtkIdType i=0; i < N; i++)
-      list->SetId(i, i);
+    std::iota(list->GetPointer(0), list->GetPointer(N), 0);
     output->Allocate(1);
     output->InsertNextCell(VTK_POLY_VERTEX, list);
     list->Delete();
@@ -388,8 +387,7 @@ void  vtkTipsyReader::Read_DarkMatter(vtkMultiBlockDataSet *mb, int N)
     vtkIdList *list = vtkIdList::New();
     std::cerr << __LINE__ << ": Allocating ID list of size "<< N << "*" << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType) << " bytes\n";
     list->SetNumberOfIds(N);
-    for(vtkIdType i=0; i < N; i++)
-      list->SetId(i, i);
+    std::iota(list->GetPointer(0), list->GetPointer(N), 0);
     output->Allocate(1);
     output->InsertNextCell(VTK_POLY_VERTEX, list);
     list->Delete();
@@ -489,8 +487,7 @@ void  vtkTipsyReader::Read_Stars(vtkMultiBlockDataSet *mb, int N)
     vtkIdList *list = vtkIdList::New();
     std::cerr << __LINE__ << ": Allocating ID list of size "<< N << "*" << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType) << " bytes\n";
     list->SetNumberOfIds(N);
-    for(vtkIdType i=0; i < N; i++)
-      list->SetId(i, i);
+    std::iota(list->GetPointer(0), list->GetPointer(N), 0);
     output->Allocate(1);
     output->InsertNextCell(VTK_POLY_VERTEX, list);
     list->Delete();
@@ -635,7 +632,6 @@ int vtkTipsyReader::CanReadFile(const char* fname)
   else
   {
     TipsyFile *file = new TipsyFile(fname);
-    file->read_header();
     bool CanReadFile = file->read_header();
     //std::cerr << __LINE__ << ": CanReadFile  = " << CanReadFile << std::endl;
     file->FileClose();

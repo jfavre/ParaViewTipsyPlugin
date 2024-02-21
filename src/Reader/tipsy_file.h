@@ -215,8 +215,8 @@ public:
       return false;
     }
 
-  void read_all(bool hasPad = true)
-    {
+void read_all(bool hasPad = true)
+  {
     if(!src.is_open())
       std::cerr << "TipsyFile: read_all(): file is not open\n";
 
@@ -303,9 +303,13 @@ public:
 	    }
 	}
 
-	printf("TipsyFile: read file %s\nnbodies: %i\nnsph:    %i\nndark:   %i\nnstar:   %i\nswapped endian: %s\n", \
-			    name, h.nbodies, h.nsph, h.ndark, h.nstar, (swap_endian) ? "yes" : "no");
-	}
+  std::cout << __LINE__ << ": TipsyFile: read file " << name
+            << "\nnbodies: " << h.nbodies
+            << "\nnsph: " << h.nsph
+            << "\nndark: " << h.ndark
+            << "\nnstar: " << h.nstar
+            << "\nswapped endian: " << swap_endian << std::endl;
+}
 
   int split_particlesSet(int N, int piece, int numPieces, int& standard_load)
   {
@@ -394,9 +398,12 @@ public:
     errs << "Mass SPH: min=" << min << ", max="<< max << endl;
 */
     }
-
-  printf("TipsyFile: read file %s\nnbodies: %i\nnsph:    %i\nndark:   %i\nnstar:   %i\nswapped endian: %s\n", \
-			    name, h.nbodies, h.nsph, h.ndark, h.nstar, (swap_endian) ? "yes" : "no");
+  std::cout << __LINE__ << ": TipsyFile: read file " << name
+            << "\nnbodies: " << h.nbodies
+            << "\nnsph: " << h.nsph
+            << "\nndark: " << h.ndark
+            << "\nnstar: " << h.nstar
+            << "\nswapped endian: " << swap_endian << std::endl;
 } // read_gas_piece()
 
   void read_dark_matter_piece(int piece, int numPieces, int &n2, bool hasPad = true)
