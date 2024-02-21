@@ -243,7 +243,7 @@ void read_all(bool hasPad = true)
 
 // by adding explicit seekg(), we make it possible to skip reading particles
 // of a particular type
-  // Read sph
+// Read sph
   if(h.nsph)
     {
     src.seekg(base_offset, src.beg);
@@ -251,57 +251,57 @@ void read_all(bool hasPad = true)
     if(swap_endian)
       {
 #ifdef USE_VTK_SWAP
-       vtkByteSwap::Swap4BERange(sph, h.nsph * sizeof(gas_particle)/sizeof(float));
+      vtkByteSwap::Swap4BERange(sph, h.nsph * sizeof(gas_particle)/sizeof(float));
 #else
-	  gas_particle* pp = sph;
-	  for(unsigned i = 0; i < h.nsph; i++, pp++)
+      gas_particle* pp = sph;
+      for(unsigned i = 0; i < h.nsph; i++, pp++)
         {
-	    for(unsigned j = 0; j < sizeof(gas_particle)/sizeof(float); j++)
+        for(unsigned j = 0; j < sizeof(gas_particle)/sizeof(float); j++)
 		  byteswap(&((float*)pp)[j]);
-	    }
+        }
 #endif
-	  }
+      }
     }
 
-	// Read dark
-	if(h.ndark)
-	{
-      src.seekg(h.nsph * sizeof(gas_particle) + base_offset, src.beg);
-	  src.read((char*)dark, h.ndark * sizeof(dark_particle));
-	  if(swap_endian)
-	    {
+// Read dark
+  if(h.ndark)
+    {
+    src.seekg(h.nsph * sizeof(gas_particle) + base_offset, src.beg);
+    src.read((char*)dark, h.ndark * sizeof(dark_particle));
+    if(swap_endian)
+      {
 #ifdef USE_VTK_SWAP
-       vtkByteSwap::Swap4BERange(dark, h.ndark * sizeof(dark_particle)/sizeof(float));
+      vtkByteSwap::Swap4BERange(dark, h.ndark * sizeof(dark_particle)/sizeof(float));
 #else
-	    dark_particle* pp = dark;
-	    for(unsigned i = 0; i < h.ndark; i++, pp++)
-	      {
-	      for(unsigned j = 0; j < sizeof(dark_particle)/sizeof(float); j++)
-		    byteswap(&((float*)pp)[j]);
-	      }
+      dark_particle* pp = dark;
+      for(unsigned i = 0; i < h.ndark; i++, pp++)
+        {
+        for(unsigned j = 0; j < sizeof(dark_particle)/sizeof(float); j++)
+          byteswap(&((float*)pp)[j]);
+        }
 #endif
-	    }
-	}
+      }
+    }
 
-	// Read star
-	if(h.nstar)
-	{
-      src.seekg(h.nsph * sizeof(gas_particle) + h.ndark * sizeof(dark_particle) + base_offset, src.beg);
-	  src.read((char*)star, h.nstar * sizeof(star_particle));
-	  if(swap_endian)
-	    {
+// Read star
+  if(h.nstar)
+    {
+    src.seekg(h.nsph * sizeof(gas_particle) + h.ndark * sizeof(dark_particle) + base_offset, src.beg);
+    src.read((char*)star, h.nstar * sizeof(star_particle));
+    if(swap_endian)
+      {
 #ifdef USE_VTK_SWAP
-       vtkByteSwap::Swap4BERange(star, h.nstar * sizeof(star_particle)/sizeof(float));
+      vtkByteSwap::Swap4BERange(star, h.nstar * sizeof(star_particle)/sizeof(float));
 #else
-	    star_particle* pp = star;
-	    for(unsigned i = 0; i < h.nstar; i++, pp++)
-	      {
-	      for(unsigned j = 0; j < sizeof(star_particle)/sizeof(float); j++)
-		    byteswap(&((float*)pp)[j]);
-	      }
+      star_particle* pp = star;
+      for(unsigned i = 0; i < h.nstar; i++, pp++)
+        {
+        for(unsigned j = 0; j < sizeof(star_particle)/sizeof(float); j++)
+          byteswap(&((float*)pp)[j]);
+        }
 #endif
-	    }
-	}
+      }
+    }
 
   std::cout << __LINE__ << ": TipsyFile: read file " << name
             << "\nnbodies: " << h.nbodies
@@ -311,7 +311,7 @@ void read_all(bool hasPad = true)
             << "\nswapped endian: " << swap_endian << std::endl;
 }
 
-  int split_particlesSet(int N, int piece, int numPieces, int& standard_load)
+int split_particlesSet(int N, int piece, int numPieces, int& standard_load)
   {
 // I call standard_load, the size of all the first pieces except the last one
 // I call load, the size of the last piece
@@ -366,16 +366,16 @@ void read_all(bool hasPad = true)
     if(swap_endian)
       {
 #ifdef USE_VTK_SWAP
-       vtkByteSwap::Swap4BERange(sph, n1 * sizeof(gas_particle)/sizeof(float));
+      vtkByteSwap::Swap4BERange(sph, n1 * sizeof(gas_particle)/sizeof(float));
 #else
-	  gas_particle* pp = sph;
-	  for(unsigned i = 0; i < n1; i++, pp++)
+      gas_particle* pp = sph;
+      for(unsigned i = 0; i < n1; i++, pp++)
         {
-	    for(unsigned j = 0; j < sizeof(gas_particle)/sizeof(float); j++)
-		  byteswap(&((float*)pp)[j]);
-	    }
+        for(unsigned j = 0; j < sizeof(gas_particle)/sizeof(float); j++)
+          byteswap(&((float*)pp)[j]);
+        }
 #endif
-	  }
+      }
 /*
     float min= 1e30;
     float max=-min;

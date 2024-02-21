@@ -162,6 +162,44 @@ int vtkTipsyReader::RequestInformation(
   return 1;
 }
 
+vtkFloatArray *vtkTipsyReader::GetVTKScalarArray(const char *name, unsigned int N, float *fp, unsigned int fpoffset)
+{
+  vtkFloatArray *vtkarray = vtkFloatArray::New();
+  vtkarray->SetNumberOfComponents(1);
+  vtkarray->SetNumberOfTuples(N);
+  vtkarray->SetName(name);
+  float *float_ptr = vtkarray->GetPointer(0);
+  std::cerr << __LINE__ << ": Allocating " << name << " array of size "<< N << "*" << sizeof(float) << " bytes = " << N*sizeof(float) << " bytes\n";
+
+  for(vtkIdType i=0; i < N; i++)
+    {
+    //phi->SetTuple(i, fp+index);
+    // avoid casting to double, and tuple intermediate copies
+    *float_ptr++ = *fp;
+    fp += fpoffset;
+    }
+  return vtkarray;
+}
+
+vtkFloatArray *vtkTipsyReader::GetVTKVectorArray(const char *name, unsigned int N, float *fp, unsigned int fpoffset)
+{
+  vtkFloatArray *vtkarray = vtkFloatArray::New();
+  vtkarray->SetNumberOfComponents(3);
+  vtkarray->SetNumberOfTuples(N);
+  vtkarray->SetName(name);
+  float *float_ptr = vtkarray->GetPointer(0);
+  std::cerr << __LINE__ << ": Allocating " << name << " vector-array of size "<< N << "*" << sizeof(float) << " bytes = " << 3*N*sizeof(float) << " bytes\n";
+
+  for(vtkIdType i=0; i < N; i++)
+    {
+    // vtkarray->SetTuple(i, fp+index);
+    // avoid casting to double, and tuple intermediate copies
+    std::copy(fp, fp+3, float_ptr); // source_first, source_last, destination
+    fp += fpoffset; float_ptr +=3;
+    }
+  return vtkarray;
+}
+
 void  vtkTipsyReader::Read_Gas(vtkMultiBlockDataSet *mb, int N)
 {
   int myType = TIPSY_TYPE_GAS;
@@ -171,76 +209,9 @@ void  vtkTipsyReader::Read_Gas(vtkMultiBlockDataSet *mb, int N)
   output->Delete();
   if(N)
   {
-  float *fp, *fp1;
-  unsigned int fpoffset, phi_idx;
-
-  fp = (float *)this->Tipsyfile->sph;
-  fpoffset = sizeof(gas_particle)/sizeof(float);
-  phi_idx = 11;
-  
-  vtkFloatArray *coords = vtkFloatArray::New();
-  coords->SetNumberOfComponents(3);
-  coords->SetNumberOfTuples(N);
-  coords->SetName("coords");
-  std::cerr << __LINE__ << ": Allocating coordinates array of size "<< N << "*" << sizeof(float) << " bytes = " << 3*N*sizeof(float) << " bytes\n";
-  fp1 = fp;
-  for(vtkIdType i=0; i < N; i++)
-    {
-    coords->SetTuple3(i, *(fp+1), *(fp+2), *(fp+3));
-    fp += fpoffset;
-    }
-
-  vtkPointData *pd = output->GetPointData();
-  if(this->GetPointArrayStatus("mass"))
-    {
-    fp = fp1;
-    vtkFloatArray *mass = vtkFloatArray::New();
-    mass->SetNumberOfComponents(1);
-    mass->SetNumberOfTuples(N);
-    mass->SetName("Mass");
-    std::cerr << __LINE__ << ": Allocating Mass array of size "<< N << "*" << sizeof(float) << " bytes = " << N*sizeof(float) << " bytes\n";
-    pd->AddArray(mass);
-    mass->Delete();
-  
-    for(vtkIdType i=0; i < N; i++)
-      {
-      mass->SetTuple(i, fp);
-      fp += fpoffset;
-      }
-    }
-  if(this->GetPointArrayStatus("phi"))
-    {
-    fp = fp1;
-    vtkFloatArray *phi = vtkFloatArray::New();
-    phi->SetNumberOfComponents(1);
-    phi->SetNumberOfTuples(N);
-    phi->SetName("phi");
-    std::cerr << __LINE__ << ": Allocating phi array of size "<< N << "*" << sizeof(float) << " bytes = " << N*sizeof(float) << " bytes\n";
-    pd->AddArray(phi);
-    phi->Delete();
-  
-    for(vtkIdType i=0; i < N; i++)
-      {
-      phi->SetTuple(i, fp+phi_idx);
-      fp += fpoffset;
-      }
-    }
-  if(this->GetPointArrayStatus("vel"))
-    {
-    fp = fp1;
-    vtkFloatArray *vel = vtkFloatArray::New();
-    vel->SetNumberOfComponents(3);
-    vel->SetNumberOfTuples(N);
-    vel->SetName("velocity");
-    std::cerr << __LINE__ << ": Allocating velocity array of size "<< N << "*" << sizeof(float) << " bytes = " << 3*N*sizeof(float) << " bytes\n";
-    for(vtkIdType i=0; i < N; i++)
-      {
-      vel->SetTuple3(i, *(fp+4), *(fp+5), *(fp+6));
-      fp += fpoffset;
-      }
-    pd->AddArray(vel);
-    vel->Delete();
-    }
+  unsigned int fpoffset = sizeof(gas_particle)/sizeof(float);
+  float *fp = (float *)this->Tipsyfile->sph + 1;
+  vtkFloatArray *coords = GetVTKVectorArray("coords", N, fp, fpoffset);
 
   vtkPoints *points = vtkPoints::New();
   points->SetData(coords);
@@ -248,39 +219,55 @@ void  vtkTipsyReader::Read_Gas(vtkMultiBlockDataSet *mb, int N)
   coords->Delete();
   points->Delete();
 
+  vtkPointData *pd = output->GetPointData();
+  if(this->GetPointArrayStatus("mass"))
+    {
+    float *fp = (float *)this->Tipsyfile->sph + 0;
+    vtkFloatArray *data = GetVTKScalarArray("mass", N, fp, fpoffset);
+    pd->AddArray(data); data->Delete();
+    }
+
+  if(this->GetPointArrayStatus("vel"))
+    {
+    float *fp = (float *)this->Tipsyfile->sph + 4;
+    vtkFloatArray *data = GetVTKVectorArray("vel", N, fp, fpoffset);
+    pd->AddArray(data); data->Delete();
+    }
+
   if(this->GetPointArrayStatus("rho"))
-      {
-      fp = fp1;
-      vtkFloatArray *rho = vtkFloatArray::New();
-      rho->SetNumberOfTuples(N);
-      rho->SetName("rho");
-      std::cerr << __LINE__ << ": Allocating rho array of size "<< N << "*" << sizeof(float) << " bytes = " << N*sizeof(float) << " bytes\n";
-      fp = (float *)this->Tipsyfile->sph + 7; // the rho array;
-      for(vtkIdType i=0; i < N; i++)
-        {
-        rho->SetTuple(i, fp);
-        fp += fpoffset;
-        }
-      pd->AddArray(rho);
-      rho->Delete();
-      }
+    {
+    float *fp = (float *)this->Tipsyfile->sph + 7;
+    vtkFloatArray *data = GetVTKScalarArray("rho", N, fp, fpoffset);
+    pd->AddArray(data); data->Delete();
+    }
+
+  if(this->GetPointArrayStatus("temp"))
+    {
+    float *fp = (float *)this->Tipsyfile->sph + 8;
+    vtkFloatArray *data = GetVTKScalarArray("temp", N, fp, fpoffset);
+    pd->AddArray(data); data->Delete();
+    }
 
   if(this->GetPointArrayStatus("hsmooth"))
-      {
-      fp = fp1;
-      vtkFloatArray *hsmooth = vtkFloatArray::New();
-      hsmooth->SetNumberOfTuples(N);
-      hsmooth->SetName("hsmooth");
-      std::cerr << __LINE__ << ": Allocating hsmooth array of size "<< N << "*" << sizeof(float) << " bytes = " << N*sizeof(float) << " bytes\n";
-      fp = (float *)this->Tipsyfile->sph + 9; // the hsmooth array;
-      for(vtkIdType i=0; i < N; i++)
-        {
-        hsmooth->SetTuple(i, fp);
-        fp += fpoffset;
-        }
-      pd->AddArray(hsmooth);
-      hsmooth->Delete();
-      }
+    {
+    float *fp = (float *)this->Tipsyfile->sph + 9;
+    vtkFloatArray *data = GetVTKScalarArray("hsmooth", N, fp, fpoffset);
+    pd->AddArray(data); data->Delete();
+    }
+      
+  if(this->GetPointArrayStatus("metals"))
+    {
+    float *fp = (float *)this->Tipsyfile->sph + 10;
+    vtkFloatArray *data = GetVTKScalarArray("metals", N, fp, fpoffset);
+    pd->AddArray(data); data->Delete();
+    }
+
+  if(this->GetPointArrayStatus("phi"))
+    {
+    float *fp = (float *)this->Tipsyfile->sph + 11;
+    vtkFloatArray *data = GetVTKScalarArray("metals", N, fp, fpoffset);
+    pd->AddArray(data); data->Delete();
+    }
 
   if (this->GenerateVertexCells)
     {
@@ -305,82 +292,36 @@ void  vtkTipsyReader::Read_DarkMatter(vtkMultiBlockDataSet *mb, int N)
   output->Delete();
   if(N)
   {
-  float *fp, *fp1;
-  unsigned int fpoffset, phi_idx;
+  float *fp = (float *)this->Tipsyfile->dark + 1;
+  unsigned int fpoffset = sizeof(dark_particle)/sizeof(float);
 
-  fp = (float *)this->Tipsyfile->dark;
-  fpoffset = sizeof(dark_particle)/sizeof(float);
-  phi_idx = 8;
-
-  vtkFloatArray *coords = vtkFloatArray::New();
-  coords->SetNumberOfComponents(3);
-  coords->SetNumberOfTuples(N);
-  coords->SetName("coords");
-  std::cerr << __LINE__ << ": Allocating coordinates array of size "<< N << "*" << sizeof(float) << " bytes = " << 3L*N*sizeof(float) << " bytes\n";
-  fp1 = fp;
-  for(vtkIdType i=0; i < N; i++)
-    {
-    coords->SetTuple3(i, *(fp+1), *(fp+2), *(fp+3));
-    fp += fpoffset;
-    }
-
-  vtkPointData *pd = output->GetPointData();
-  if(this->GetPointArrayStatus("mass"))
-    {
-    fp = fp1;
-    vtkFloatArray *mass = vtkFloatArray::New();
-    mass->SetNumberOfComponents(1);
-    mass->SetNumberOfTuples(N);
-    mass->SetName("Mass");
-    std::cerr << __LINE__ << ": Allocating Mass array of size "<< N << "*" << sizeof(float) << " bytes = " << N*sizeof(float) << " bytes\n";
-    pd->AddArray(mass);
-    mass->Delete();
-  
-    for(vtkIdType i=0; i < N; i++)
-      {
-      mass->SetTuple(i, fp);
-      fp += fpoffset;
-      }
-    }
-  if(this->GetPointArrayStatus("phi"))
-    {
-    fp = fp1;
-    vtkFloatArray *phi = vtkFloatArray::New();
-    phi->SetNumberOfComponents(1);
-    phi->SetNumberOfTuples(N);
-    phi->SetName("phi");
-    std::cerr << __LINE__ << ": Allocating phi array of size "<< N << "*" << sizeof(float) << " bytes = " << N*sizeof(float) << " bytes\n";
-    pd->AddArray(phi);
-    phi->Delete();
-  
-    for(vtkIdType i=0; i < N; i++)
-      {
-      phi->SetTuple(i, fp+phi_idx);
-      fp += fpoffset;
-      }
-    }
-  if(this->GetPointArrayStatus("vel"))
-    {
-    fp = fp1;
-    vtkFloatArray *vel = vtkFloatArray::New();
-    vel->SetNumberOfComponents(3);
-    vel->SetNumberOfTuples(N);
-    vel->SetName("velocity");
-    std::cerr << __LINE__ << ": Allocating velocity array of size "<< N << "*" << sizeof(float) << " bytes = " << 3L*N*sizeof(float) << " bytes\n";
-    for(vtkIdType i=0; i < N; i++)
-      {
-      vel->SetTuple3(i, *(fp+4), *(fp+5), *(fp+6));
-      fp += fpoffset;
-      }
-    pd->AddArray(vel);
-    vel->Delete();
-    }
+  vtkFloatArray *coords = GetVTKVectorArray("coords", N, fp, fpoffset);
 
   vtkPoints *points = vtkPoints::New();
   points->SetData(coords);
   output->SetPoints(points);
   coords->Delete();
   points->Delete();
+
+  vtkPointData *pd = output->GetPointData();
+  if(this->GetPointArrayStatus("mass"))
+    {
+    float *fp = (float *)this->Tipsyfile->dark + 0;
+    vtkFloatArray *data = GetVTKScalarArray("mass", N, fp, fpoffset);
+    pd->AddArray(data); data->Delete();
+    }
+  if(this->GetPointArrayStatus("phi"))
+    {
+    float *fp = (float *)this->Tipsyfile->dark + 8;
+    vtkFloatArray *data = GetVTKScalarArray("phi", N, fp, fpoffset);
+    pd->AddArray(data); data->Delete();
+    }
+  if(this->GetPointArrayStatus("vel"))
+    {
+    float *fp = (float *)this->Tipsyfile->dark + 4;
+    vtkFloatArray *data = GetVTKVectorArray("vel", N, fp, fpoffset);
+    pd->AddArray(data); data->Delete();
+    }
 
   if (this->GenerateVertexCells)
     {
@@ -405,82 +346,35 @@ void  vtkTipsyReader::Read_Stars(vtkMultiBlockDataSet *mb, int N)
   output->Delete();
   if(N)
   {
-  float *fp, *fp1;
-  unsigned int fpoffset, phi_idx;
-
-  fp = (float *)this->Tipsyfile->star;
-  fpoffset = sizeof(star_particle)/sizeof(float);
-  phi_idx = 10;
-  
-  vtkFloatArray *coords = vtkFloatArray::New();
-  coords->SetNumberOfComponents(3);
-  coords->SetNumberOfTuples(N);
-  coords->SetName("coords");
-  std::cerr << __LINE__ << ": Allocating coordinates array of size "<< N << "*" << sizeof(float) << " bytes = " << 3*N*sizeof(float) << " bytes\n";
-  fp1 = fp;
-  for(vtkIdType i=0; i < N; i++)
-    {
-    coords->SetTuple3(i, *(fp+1), *(fp+2), *(fp+3));
-    fp += fpoffset;
-    }
-
-  vtkPointData *pd = output->GetPointData();
-  if(this->GetPointArrayStatus("mass"))
-    {
-    fp = fp1;
-    vtkFloatArray *mass = vtkFloatArray::New();
-    mass->SetNumberOfComponents(1);
-    mass->SetNumberOfTuples(N);
-    mass->SetName("Mass");
-    std::cerr << __LINE__ << ": Allocating Mass array of size "<< N << "*" << sizeof(float) << " bytes = " << N*sizeof(float) << " bytes\n";
-    pd->AddArray(mass);
-    mass->Delete();
-  
-    for(vtkIdType i=0; i < N; i++)
-      {
-      mass->SetTuple(i, fp);
-      fp += fpoffset;
-      }
-    }
-  if(this->GetPointArrayStatus("phi"))
-    {
-    fp = fp1;
-    vtkFloatArray *phi = vtkFloatArray::New();
-    phi->SetNumberOfComponents(1);
-    phi->SetNumberOfTuples(N);
-    phi->SetName("phi");
-    std::cerr << __LINE__ << ": Allocating phi array of size "<< N << "*" << sizeof(float) << " bytes = " << N*sizeof(float) << " bytes\n";
-    pd->AddArray(phi);
-    phi->Delete();
-  
-    for(vtkIdType i=0; i < N; i++)
-      {
-      phi->SetTuple(i, fp+phi_idx);
-      fp += fpoffset;
-      }
-    }
-  if(this->GetPointArrayStatus("vel"))
-    {
-    fp = fp1;
-    vtkFloatArray *vel = vtkFloatArray::New();
-    vel->SetNumberOfComponents(3);
-    vel->SetNumberOfTuples(N);
-    vel->SetName("velocity");
-    std::cerr << __LINE__ << ": Allocating velocity array of size "<< N << "*" << sizeof(float) << " bytes = " << 3*N*sizeof(float) << " bytes\n";
-    for(vtkIdType i=0; i < N; i++)
-      {
-      vel->SetTuple3(i, *(fp+4), *(fp+5), *(fp+6));
-      fp += fpoffset;
-      }
-    pd->AddArray(vel);
-    vel->Delete();
-    }
+  unsigned int fpoffset = sizeof(star_particle)/sizeof(float);
+  float *fp = (float *)this->Tipsyfile->star + 1;
+  vtkFloatArray *coords = GetVTKVectorArray("coords", N, fp, fpoffset);
 
   vtkPoints *points = vtkPoints::New();
   points->SetData(coords);
   output->SetPoints(points);
   coords->Delete();
   points->Delete();
+
+  vtkPointData *pd = output->GetPointData();
+  if(this->GetPointArrayStatus("mass"))
+    {
+    float *fp = (float *)this->Tipsyfile->star + 0;
+    vtkFloatArray *data = GetVTKScalarArray("mass", N, fp, fpoffset);
+    pd->AddArray(data); data->Delete();
+    }
+  if(this->GetPointArrayStatus("phi"))
+    {
+    float *fp = (float *)this->Tipsyfile->star + 10;
+    vtkFloatArray *data = GetVTKScalarArray("phi", N, fp, fpoffset);
+    pd->AddArray(data); data->Delete();
+    }
+  if(this->GetPointArrayStatus("vel"))
+    {
+    float *fp = (float *)this->Tipsyfile->star + 4;
+    vtkFloatArray *data = GetVTKVectorArray("vel", N, fp, fpoffset);
+    pd->AddArray(data); data->Delete();
+    }
 
   if (this->GenerateVertexCells)
     {
@@ -493,7 +387,7 @@ void  vtkTipsyReader::Read_Stars(vtkMultiBlockDataSet *mb, int N)
     list->Delete();
     }
   }
-} // Read_DarkMatter
+} // Read_Stars
 
 int vtkTipsyReader::RequestData(
   vtkInformation *vtkNotUsed(request),

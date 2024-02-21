@@ -19,6 +19,7 @@
 class TipsyFile;
 class vtkDataArraySelection;
 class vtkStdString;
+class vtkFloatArray;
 class vtkMultiProcessController;
 
 //enum class particleType {Gas=0, Dark=1, Star=2, All=3};
@@ -107,6 +108,8 @@ protected:
   void  Read_Gas(vtkMultiBlockDataSet *mb, int N);
   void  Read_DarkMatter(vtkMultiBlockDataSet *mb, int N);
   void  Read_Stars(vtkMultiBlockDataSet *mb, int N);
+  vtkFloatArray* GetVTKScalarArray(const char *name, unsigned int N, float *fp, unsigned int poffset);
+  vtkFloatArray* GetVTKVectorArray(const char *name, unsigned int N, float *fp, unsigned int poffset);
   //
   // Internal Variables
   //
