@@ -3,15 +3,14 @@
 // vtkTipsyReader reads 
 // 
 // .SECTION Thanks
-// Tim Dykes
-// Jean Favre
+// Jean M. Favre
 // CSCS - Swiss National Supercomputing Centre for creating and contributing
 // this class.
 
 #ifndef vtkTipsyReader_h
 #define vtkTipsyReader_h
 
-#include "vtkMultiBlockDataSetAlgorithm.h"
+#include "vtkPartitionedDataSetCollectionAlgorithm.h"
 #include <string>
 #include <vector>
 #include <sstream>
@@ -20,6 +19,7 @@ class TipsyFile;
 class vtkDataArraySelection;
 class vtkStdString;
 class vtkFloatArray;
+class vtkPolyData;
 class vtkMultiProcessController;
 
 //enum class particleType {Gas=0, Dark=1, Star=2, All=3};
@@ -29,13 +29,12 @@ class vtkMultiProcessController;
 #define TIPSY_TYPE_ALL 3
 static std::vector<std::string> ParticleTypes = {"Gas", "Dark", "Star"};
 
-class vtkTipsyReader : public vtkMultiBlockDataSetAlgorithm
+class vtkTipsyReader : public vtkPartitionedDataSetCollectionAlgorithm
 {
 public:
   static vtkTipsyReader *New();
-  vtkTypeMacro(vtkTipsyReader,vtkMultiBlockDataSetAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);   
-
+  vtkTypeMacro(vtkTipsyReader, vtkPartitionedDataSetCollectionAlgorithm);   
+  void PrintSelf(ostream& os, vtkIndent indent) override;
   vtkSetStringMacro(FileName);
   vtkGetStringMacro(FileName);
 
@@ -51,9 +50,6 @@ public:
   void SetParticleTypeToStar() { this->SetParticleType(TIPSY_TYPE_STAR); }
   void SetParticleTypeToAll() { this->SetParticleType(TIPSY_TYPE_ALL); }
   
-  //vtkSetEnumMacro(ParticleType, particleType);
-  //vtkGetEnumMacro(ParticleType, particleType);
-  
   // Description:
   // When set (default no), the reader will generate a vertex cell
   // for each point/particle read. When using the points directly
@@ -66,9 +62,6 @@ public:
   vtkBooleanMacro(GenerateVertexCells, int);
 
   int         GetNumberOfParticleTypeArrays() { return 3; }
-  //const char* GetParticleTypeArrayName(int index);
-  //int         GetParticleTypeArrayStatus(const char* name);
-  //void        SetParticleTypeArrayStatus(const char* name, int status);
   void        EnableAllParticleTypes();
   void        DisableAllParticleTypes();
 
@@ -101,13 +94,15 @@ protected:
    vtkTipsyReader();
   ~vtkTipsyReader() override;
   //
-  int   RequestInformation(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-  int   RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  int   RequestInformation(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
+  int   RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
+  int   RequestDataObject(vtkInformation* request, vtkInformationVector** inputVector,
+    vtkInformationVector* outputVector) override;
   int   OpenFile();
   void  CloseFile();
-  void  Read_Gas(vtkMultiBlockDataSet *mb, int N);
-  void  Read_DarkMatter(vtkMultiBlockDataSet *mb, int N);
-  void  Read_Stars(vtkMultiBlockDataSet *mb, int N);
+  vtkPolyData* Read_Gas(int N);
+  vtkPolyData* Read_DarkMatter(int N);
+  vtkPolyData* Read_Stars(int N);
   vtkFloatArray* GetVTKScalarArray(const char *name, unsigned int N, float *fp, unsigned int poffset);
   vtkFloatArray* GetVTKVectorArray(const char *name, unsigned int N, float *fp, unsigned int poffset);
   //
@@ -127,7 +122,7 @@ protected:
   typedef std::vector<std::string>  stringlist;
   std::vector<stringlist>           FieldArrays;
 
-  // To allow paraview gui to enable/disable scalar reading
+  // To allow ParaView GUI to enable/disable scalar reading
   vtkDataArraySelection* PointDataArraySelection;
   // To allow paraview gui to enable/disable block (particle type) selective reading
   // vtkDataArraySelection* ParticleTypeSelection;

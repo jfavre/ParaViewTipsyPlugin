@@ -8,14 +8,14 @@
 
 #include "vtkTipsyReader.h"
 
-#include "vtkCellType.h"
 #include "vtkDataArray.h"
 #include "vtkDataArraySelection.h"
 #include "vtkFloatArray.h"
 #include "vtkIdList.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
-#include "vtkMultiBlockDataSet.h"
+#include "vtkPartitionedDataSet.h"
+#include "vtkPartitionedDataSetCollection.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPoints.h"
@@ -52,7 +52,6 @@ vtkTipsyReader::vtkTipsyReader()
   this->UpdatePiece              = 0;
   this->UpdateNumPieces          = 0;
   this->PointDataArraySelection  = vtkDataArraySelection::New();
-  //this->ParticleTypeSelection    = vtkDataArraySelection::New();
 #ifdef PARAVIEW_USE_MPI
   this->Controller = nullptr;
   this->SetController(vtkMultiProcessController::GetGlobalController());
@@ -67,9 +66,6 @@ vtkTipsyReader::~vtkTipsyReader()
 
   this->PointDataArraySelection->Delete();
   this->PointDataArraySelection = 0;
-  
-  //this->ParticleTypeSelection->Delete();
-  //this->ParticleTypeSelection = 0;
 
 #ifdef PARAVIEW_USE_MPI
   this->SetController(nullptr);
@@ -119,6 +115,22 @@ int vtkTipsyReader::OpenFile()
   return 1;
 }
 
+//------------------------------------------------------------------------
+int vtkTipsyReader::RequestDataObject(vtkInformation* vtkNotUsed(request),
+  vtkInformationVector** vtkNotUsed(inputVector), vtkInformationVector* outputVector)
+{
+  vtkInformation* outInfo = outputVector->GetInformationObject(0);
+  vtkPartitionedDataSetCollection* output =
+    vtkPartitionedDataSetCollection::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
+  if (!output)
+  {
+    output = vtkPartitionedDataSetCollection::New();
+    outInfo->Set(vtkDataObject::DATA_OBJECT(), output);
+    output->Delete();
+  }
+  return 1;
+}
+
 //----------------------------------------------------------------------------
 int vtkTipsyReader::RequestInformation(
   vtkInformation *vtkNotUsed(request),
@@ -162,14 +174,16 @@ int vtkTipsyReader::RequestInformation(
   return 1;
 }
 
-vtkFloatArray *vtkTipsyReader::GetVTKScalarArray(const char *name, unsigned int N, float *fp, unsigned int fpoffset)
+vtkFloatArray *
+vtkTipsyReader::GetVTKScalarArray(const char *name, unsigned int N, float *fp, unsigned int fpoffset)
 {
   vtkFloatArray *vtkarray = vtkFloatArray::New();
   vtkarray->SetNumberOfComponents(1);
   vtkarray->SetNumberOfTuples(N);
   vtkarray->SetName(name);
   float *float_ptr = vtkarray->GetPointer(0);
-  std::cerr << __LINE__ << ": Allocating " << name << " array of size "<< N << "*" << sizeof(float) << " bytes = " << N*sizeof(float) << " bytes\n";
+  std::cout << __LINE__ << ": Allocating " << name << " array of size "<< N << "*"
+            << sizeof(float) << " bytes = " << N*sizeof(float) << " bytes\n";
 
   for(vtkIdType i=0; i < N; i++)
     {
@@ -181,14 +195,16 @@ vtkFloatArray *vtkTipsyReader::GetVTKScalarArray(const char *name, unsigned int 
   return vtkarray;
 }
 
-vtkFloatArray *vtkTipsyReader::GetVTKVectorArray(const char *name, unsigned int N, float *fp, unsigned int fpoffset)
+vtkFloatArray *
+vtkTipsyReader::GetVTKVectorArray(const char *name, unsigned int N, float *fp, unsigned int fpoffset)
 {
   vtkFloatArray *vtkarray = vtkFloatArray::New();
   vtkarray->SetNumberOfComponents(3);
   vtkarray->SetNumberOfTuples(N);
   vtkarray->SetName(name);
   float *float_ptr = vtkarray->GetPointer(0);
-  std::cerr << __LINE__ << ": Allocating " << name << " vector-array of size "<< N << "*" << sizeof(float) << " bytes = " << 3*N*sizeof(float) << " bytes\n";
+  std::cout << __LINE__ << ": Allocating " << name << " vector-array of size "<< N << "*"
+            << sizeof(float) << " bytes = " << 3*N*sizeof(float) << " bytes\n";
 
   for(vtkIdType i=0; i < N; i++)
     {
@@ -200,13 +216,9 @@ vtkFloatArray *vtkTipsyReader::GetVTKVectorArray(const char *name, unsigned int 
   return vtkarray;
 }
 
-void  vtkTipsyReader::Read_Gas(vtkMultiBlockDataSet *mb, int N)
+vtkPolyData *vtkTipsyReader::Read_Gas(int N)
 {
-  int myType = TIPSY_TYPE_GAS;
   vtkPolyData *output = vtkPolyData::New();
-  mb->SetBlock(myType, output);
-  mb->GetMetaData(myType)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[myType]);
-  output->Delete();
   if(N)
   {
   unsigned int fpoffset = sizeof(gas_particle)/sizeof(float);
@@ -272,24 +284,26 @@ void  vtkTipsyReader::Read_Gas(vtkMultiBlockDataSet *mb, int N)
   if (this->GenerateVertexCells)
     {
     vtkIdList *list = vtkIdList::New();
-    std::cerr << __LINE__ << ": Allocating ID list of size "<< N << "*" << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType) << " bytes\n";
+    std::cout << __LINE__ << ": Allocating ID list of size "<< N << "*"
+              << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType) << " bytes\n";
     list->SetNumberOfIds(N);
     std::iota(list->GetPointer(0), list->GetPointer(N), 0);
     output->Allocate(1);
     output->InsertNextCell(VTK_POLY_VERTEX, list);
     list->Delete();
     }
+  return output;
+  }
+  else
+  {
+    std::cerr << __LINE__ << "not carefully implemented. What to return?\n";
+    return nullptr;
   }
 } // Read_Gas
 
-void  vtkTipsyReader::Read_DarkMatter(vtkMultiBlockDataSet *mb, int N)
+vtkPolyData *vtkTipsyReader::Read_DarkMatter(int N)
 {
-  int myType = TIPSY_TYPE_DARK;
-
   vtkPolyData *output = vtkPolyData::New();
-  mb->SetBlock(myType, output);
-  mb->GetMetaData(myType)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[myType]);
-  output->Delete();
   if(N)
   {
   float *fp = (float *)this->Tipsyfile->dark + 1;
@@ -326,24 +340,26 @@ void  vtkTipsyReader::Read_DarkMatter(vtkMultiBlockDataSet *mb, int N)
   if (this->GenerateVertexCells)
     {
     vtkIdList *list = vtkIdList::New();
-    std::cerr << __LINE__ << ": Allocating ID list of size "<< N << "*" << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType) << " bytes\n";
+    std::cout << __LINE__ << ": Allocating ID list of size "<< N << "*"
+              << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType) << " bytes\n";
     list->SetNumberOfIds(N);
     std::iota(list->GetPointer(0), list->GetPointer(N), 0);
     output->Allocate(1);
     output->InsertNextCell(VTK_POLY_VERTEX, list);
     list->Delete();
     }
+  return output;
+  }
+  else
+  {
+    std::cerr << __LINE__ << "not carefully implemented. What to return?\n";
+    return nullptr;
   }
 } // Read_DarkMatter
 
-void  vtkTipsyReader::Read_Stars(vtkMultiBlockDataSet *mb, int N)
+vtkPolyData *vtkTipsyReader::Read_Stars(int N)
 {
-  int myType = TIPSY_TYPE_STAR;
-
   vtkPolyData *output = vtkPolyData::New();
-  mb->SetBlock(myType, output);
-  mb->GetMetaData(myType)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[myType]);
-  output->Delete();
   if(N)
   {
   unsigned int fpoffset = sizeof(star_particle)/sizeof(float);
@@ -379,13 +395,20 @@ void  vtkTipsyReader::Read_Stars(vtkMultiBlockDataSet *mb, int N)
   if (this->GenerateVertexCells)
     {
     vtkIdList *list = vtkIdList::New();
-    std::cerr << __LINE__ << ": Allocating ID list of size "<< N << "*" << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType) << " bytes\n";
+    std::cerr << __LINE__ << ": Allocating ID list of size "<< N << "*"
+              << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType) << " bytes\n";
     list->SetNumberOfIds(N);
     std::iota(list->GetPointer(0), list->GetPointer(N), 0);
     output->Allocate(1);
     output->InsertNextCell(VTK_POLY_VERTEX, list);
     list->Delete();
     }
+  return output;
+  }
+  else
+  {
+    std::cerr << __LINE__ << "not carefully implemented. What to return?\n";
+    return nullptr;
   }
 } // Read_Stars
 
@@ -395,12 +418,9 @@ int vtkTipsyReader::RequestData(
   vtkInformationVector *outputVector)
 {
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
-  vtkDataObject* doOutput = outInfo->Get(vtkDataObject::DATA_OBJECT());
-  vtkMultiBlockDataSet* mb = vtkMultiBlockDataSet::SafeDownCast(doOutput);
-  if (!mb)
-    {
-    return 0;
-    }
+  auto output =
+    vtkPartitionedDataSetCollection::SafeDownCast(vtkDataObject::GetData(outputVector, 0));
+
 #ifdef PARAVIEW_USE_MPI
   if (this->Controller &&
       (this->UpdatePiece != this->Controller->GetLocalProcessId() ||
@@ -421,41 +441,64 @@ int vtkTipsyReader::RequestData(
     }
   this->Tipsyfile->read_header();
   int n[3] = {0,0,0};
-
+  
+  vtkPolyData *pd;
   if(this->ParticleType == TIPSY_TYPE_GAS)
     {
+    output->SetNumberOfPartitionedDataSets(1);
+    output->SetNumberOfPartitions(0, 1);
     n[0] = 1;
     this->Tipsyfile->read_gas_piece(this->UpdatePiece, this->UpdateNumPieces, n[0]);
-    this->Read_Gas(mb, n[0]);
+    pd = this->Read_Gas(n[0]);
+    output->SetPartition(0, 0, pd);
+    pd->Delete();
+    output->GetMetaData(0u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_GAS]);
     this->Tipsyfile->Free_Sph_Buffer();
     }
  else if(this->ParticleType == TIPSY_TYPE_DARK)
     {
+    output->SetNumberOfPartitionedDataSets(1);
+    output->SetNumberOfPartitions(0, 1);
     n[1] = 1;
     this->Tipsyfile->read_dark_matter_piece(this->UpdatePiece, this->UpdateNumPieces, n[1]);
-    this->Read_DarkMatter(mb, n[1]);
+    pd = this->Read_DarkMatter(n[1]);
+    output->SetPartition(0, 0, pd);
+    pd->Delete();
+    output->GetMetaData(0u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_DARK]);
     this->Tipsyfile->Free_Dark_Buffer();
     }
   else if(this->ParticleType == TIPSY_TYPE_STAR)
     {
+    output->SetNumberOfPartitionedDataSets(1);
+    output->SetNumberOfPartitions(0, 1);
     n[2] = 1;
     this->Tipsyfile->read_star_piece(this->UpdatePiece, this->UpdateNumPieces, n[2]);
-    this->Read_Stars(mb, n[2]);
+    pd = this->Read_Stars(n[2]);
+    output->SetPartition(0, 0, pd);
+    pd->Delete();
+    output->GetMetaData(0u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_STAR]);
     this->Tipsyfile->Free_Star_Buffer();
     }
   else if(this->ParticleType == TIPSY_TYPE_ALL)
     {
+    output->SetNumberOfPartitionedDataSets(3);
+    output->SetNumberOfPartitions(0, 1);
+    output->SetNumberOfPartitions(1, 1);
+    output->SetNumberOfPartitions(2, 1);
     n[0] = 1;
     this->Tipsyfile->read_gas_piece(this->UpdatePiece, this->UpdateNumPieces, n[0]);
-    this->Read_Gas(mb, n[0]);
+    output->SetPartition(0, 0, this->Read_Gas(n[0]));
+    output->GetMetaData(0u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_GAS]);
     this->Tipsyfile->Free_Sph_Buffer();
     n[1] = 1;
     this->Tipsyfile->read_dark_matter_piece(this->UpdatePiece, this->UpdateNumPieces, n[1]);
-    this->Read_DarkMatter(mb, n[1]);
+    output->SetPartition(1, 0, this->Read_DarkMatter(n[1]));
+    output->GetMetaData(1u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_DARK]);
     this->Tipsyfile->Free_Dark_Buffer();
     n[2] = 1;
     this->Tipsyfile->read_star_piece(this->UpdatePiece, this->UpdateNumPieces, n[2]);
-    this->Read_Stars(mb, n[2]);
+    output->SetPartition(2, 0, this->Read_Stars(n[2]));
+    output->GetMetaData(2u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_STAR]);
     this->Tipsyfile->Free_Star_Buffer();
     }
   this->CloseFile();
@@ -533,5 +576,4 @@ int vtkTipsyReader::CanReadFile(const char* fname)
     return CanReadFile;
   }
 }
-
 
