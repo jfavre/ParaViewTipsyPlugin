@@ -9,7 +9,8 @@ VTK_MODULE_INIT(vtkInteractionStyle);
 #include "vtkGeometryFilter.h"
 #include "vtkInformation.h"
 #include "vtkLookupTable.h"
-#include "vtkMultiBlockDataSet.h"
+#include "vtkPartitionedDataSetCollection.h"
+#include "vtkPartitionedDataSet.h"
 #include "vtkNew.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
@@ -82,7 +83,7 @@ vtkIOTipsyCxxTests(int argc, char **argv)
 
   double range[2];
       
-  vtkDataSet *FirstBlock = static_cast<vtkDataSet *>(reader->GetOutput()->GetBlock(my_map[partname]));
+  vtkDataSet *FirstBlock = static_cast<vtkDataSet *>(reader->GetOutput()->GetPartitionedDataSet(0)->GetPartition(my_map[partname]));
   if(varname.size())
     {
     FirstBlock->GetPointData()->GetArray(0)->GetRange(range);
