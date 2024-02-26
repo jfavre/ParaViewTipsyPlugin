@@ -62,8 +62,6 @@ public:
   vtkBooleanMacro(GenerateVertexCells, int);
 
   int         GetNumberOfParticleTypeArrays() { return 3; }
-  void        EnableAllParticleTypes();
-  void        DisableAllParticleTypes();
 
   int         GetNumberOfPointArrays();
   const char* GetPointArrayName(int index);

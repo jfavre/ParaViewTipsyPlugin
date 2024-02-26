@@ -296,7 +296,6 @@ vtkPolyData *vtkTipsyReader::Read_Gas(int N)
   }
   else
   {
-    std::cerr << __LINE__ << "not carefully implemented. What to return?\n";
     return nullptr;
   }
 } // Read_Gas
@@ -352,7 +351,6 @@ vtkPolyData *vtkTipsyReader::Read_DarkMatter(int N)
   }
   else
   {
-    std::cerr << __LINE__ << "not carefully implemented. What to return?\n";
     return nullptr;
   }
 } // Read_DarkMatter
@@ -407,7 +405,6 @@ vtkPolyData *vtkTipsyReader::Read_Stars(int N)
   }
   else
   {
-    std::cerr << __LINE__ << "not carefully implemented. What to return?\n";
     return nullptr;
   }
 } // Read_Stars

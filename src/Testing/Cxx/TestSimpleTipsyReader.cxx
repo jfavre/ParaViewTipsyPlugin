@@ -23,20 +23,17 @@ VTK_MODULE_INIT(vtkInteractionStyle);
 #include <vtksys/SystemTools.hxx>
 #include <vtksys/CommandLineArguments.hxx>
 
-#include <map>
-
-std::map<std::string, int> my_map = {
-    { "Gas", 0 },
-    { "Dark", 1 },
-    { "Star", 2 }
-};
+#include <vector>
+#include <string>
+using namespace std;
+const vector<string> ptypes = {"gas", "dark", "star"};
 
 int
 vtkIOTipsyCxxTests(int argc, char **argv)
 {
-  std::string filein;
-  std::string varname, partname;
-  bool vis = 0;
+  string filein;
+  string varname, partname; // initialized empty
+  bool vis = false;
 
   double TimeStep = 0.0;
   int k, BlockIndex = 0;
@@ -70,20 +67,43 @@ vtkIOTipsyCxxTests(int argc, char **argv)
   reader->DebugOff();
   reader->SetFileName(filein.c_str());
   reader->UpdateInformation();
-  //reader->DisableAllParticleTypes();
-  reader->SetParticleType(my_map[partname]);
-  
+  if(partname.empty())
+    reader->SetParticleTypeToAll();
+  else
+    {
+    auto it = find(ptypes.cbegin(), ptypes.cend(), partname);
+    if (it != ptypes.cend())
+      {
+      BlockIndex = it - ptypes.cbegin();
+      reader->SetParticleType(BlockIndex);
+      cerr << "Partname GetParticleType" << reader->GetParticleType() << endl;
+      }
+    else
+      {
+      cerr << "Partname should be one of 'gas', 'dark', 'star'" << endl;
+      return EXIT_FAILURE;
+      }
+    }
   for(auto i=0; i < reader->GetNumberOfPointArrays(); i++)
     cout << "found array (" << i << ") = " << reader->GetPointArrayName(i) << endl;
-  reader->DisableAllPointArrays();
-  reader->SetPointArrayStatus(varname.c_str(), 1);
-
+  
+  if(varname.empty())
+    reader->EnableAllPointArrays();
+  else
+    {
+    reader->DisableAllPointArrays();
+    reader->SetPointArrayStatus(varname.c_str(), 1);
+    }
+  if(vis)
+    reader->GenerateVertexCellsOn();
+  else
+    reader->GenerateVertexCellsOff();
   reader->UpdateTimeStep(TimeStep); // time value
   reader->Update();
 
   double range[2];
       
-  vtkDataSet *FirstBlock = static_cast<vtkDataSet *>(reader->GetOutput()->GetPartitionedDataSet(0)->GetPartition(my_map[partname]));
+  vtkDataSet *FirstBlock = static_cast<vtkDataSet *>(reader->GetOutput()->GetPartitionedDataSet(0)->GetPartition(BlockIndex));
   if(varname.size())
     {
     FirstBlock->GetPointData()->GetArray(0)->GetRange(range);
@@ -98,6 +118,7 @@ vtkIOTipsyCxxTests(int argc, char **argv)
   writer->Write();
   */
   
+
 if(vis)
   {
   vtkNew<vtkLookupTable> lut;

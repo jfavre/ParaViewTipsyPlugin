@@ -329,13 +329,13 @@ int split_particlesSet(int N, int piece, int numPieces, int& standard_load)
   return load;
   }
 
-  void read_gas_piece(int piece, int numPieces, int &n1, bool hasPad = true)
+void read_gas_piece(int piece, int numPieces, int &n1, bool hasPad = true)
   {
 // if n1 or n2 or n3 = 0, it means we do not read the particular type.
   int load, standard_load[3]={0,0,0};
 
   if(!src.is_open())
-    std::cerr << "TipsyFile: read_all(): file is not open\n";
+    std::cerr << "TipsyFile: read_gas_piece(): file is not open\n";
 
   long base_offset = sizeof(header);
 
@@ -404,15 +404,16 @@ int split_particlesSet(int N, int piece, int numPieces, int& standard_load)
             << "\nndark: " << h.ndark
             << "\nnstar: " << h.nstar
             << "\nswapped endian: " << swap_endian << std::endl;
+
 } // read_gas_piece()
 
-  void read_dark_matter_piece(int piece, int numPieces, int &n2, bool hasPad = true)
+void read_dark_matter_piece(int piece, int numPieces, int &n2, bool hasPad = true)
   {
 // if n1 or n2 or n3 = 0, it means we do not read the particular type.
   int load, standard_load[3]={0,0,0};
 
   if(!src.is_open())
-    std::cerr << "TipsyFile: read_all(): file is not open\n";
+    std::cerr << "TipsyFile: read_dark_matter_piece(): file is not open\n";
 
   long base_offset = sizeof(header);
 
@@ -461,13 +462,13 @@ int split_particlesSet(int N, int piece, int numPieces, int& standard_load)
     }
 } // read_dark_matter_piece()
 
-  void read_star_piece(int piece, int numPieces, int &n3, bool hasPad = true)
+void read_star_piece(int piece, int numPieces, int &n3, bool hasPad = true)
   {
 // if n1 or n2 or n3 = 0, it means we do not read the particular type.
   int load, standard_load[3]={0,0,0};
 
   if(!src.is_open())
-    std::cerr << "TipsyFile: read_all(): file is not open\n";
+    std::cerr << "TipsyFile: read_star_piece(): file is not open\n";
 
   long base_offset = sizeof(header);
 
@@ -518,25 +519,25 @@ int split_particlesSet(int N, int piece, int numPieces, int& standard_load)
 } // read_star_piece()
 
 void write(std::string name, bool hasPad = true)
-	{
-		// Output file
-		std::ofstream out(name.c_str(), std::ios::binary);
+  {
+// Output file
+  std::ofstream out(name.c_str(), std::ios::binary);
 
-		if(!out.is_open())
-		{
-			std::cerr << "TipsyFile: write() could not open file " << name.c_str() << " for output.\n";
-		}
+  if(!out.is_open())
+    {
+    std::cerr << "TipsyFile: write() could not open file " << name.c_str() << " for output.\n";
+    }
 
-		// Header struct includes padding, if we dont want padding dont write the final int.
-		// We always swap endianness of header - but if we didnt also swap the endianness 
-		// of the file, then we should swap back header
+// Header struct includes padding, if we dont want padding dont write the final int.
+// We always swap endianness of header - but if we didnt also swap the endianness 
+// of the file, then we should swap back header
 
-		int nsph = h.nsph;
-		int ndark = h.ndark;
-		int nstar = h.nstar;
+  int nsph = h.nsph;
+  int ndark = h.ndark;
+  int nstar = h.nstar;
 /*
-		if(!swap_endian)
-		{
+  if(!swap_endian)
+    {
 #ifdef USE_VTK_SWAP
           vtkByteSwap::Swap8BE(&h.time);
           vtkByteSwap::Swap4BE(&h.nbodies);
@@ -553,24 +554,24 @@ void write(std::string name, bool hasPad = true)
 	        byteswap(&h.ndark);
 	        byteswap(&h.nstar);
 #endif
-		}
+    }
 */
-		out.write((char*)&h, sizeof(header) - (!hasPad ? sizeof(int) : 0) );
+  out.write((char*)&h, sizeof(header) - (!hasPad ? sizeof(int) : 0) );
 
-		// Write sph
-		if(nsph > 0)
-			out.write((char*)sph, sizeof(gas_particle) * nsph);
+  // Write gas
+  if(nsph > 0)
+    out.write((char*)sph, sizeof(gas_particle) * nsph);
 
-		// Write dark
-		if(ndark > 0)
-			out.write((char*)dark, sizeof(dark_particle) * ndark);
+  // Write dark
+  if(ndark > 0)
+    out.write((char*)dark, sizeof(dark_particle) * ndark);
 
-		// Write star
-		if(nstar > 0)
-			out.write((char*)star, sizeof(star_particle) * nstar);
+  // Write star
+  if(nstar > 0)
+    out.write((char*)star, sizeof(star_particle) * nstar);
 
-		out.close();
-	};
+  out.close();
+  };
 
 private:
 #ifndef USE_VTK_SWAP
