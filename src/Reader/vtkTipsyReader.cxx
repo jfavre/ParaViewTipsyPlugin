@@ -277,7 +277,7 @@ vtkPolyData *vtkTipsyReader::Read_Gas(int N)
   if(this->GetPointArrayStatus("phi"))
     {
     float *fp = (float *)this->Tipsyfile->sph + 11;
-    vtkFloatArray *data = GetVTKScalarArray("metals", N, fp, fpoffset);
+    vtkFloatArray *data = GetVTKScalarArray("phi", N, fp, fpoffset);
     pd->AddArray(data); data->Delete();
     }
 
