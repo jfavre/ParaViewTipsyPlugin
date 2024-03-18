@@ -23,17 +23,23 @@ VTK_MODULE_INIT(vtkInteractionStyle);
 #include <vtksys/SystemTools.hxx>
 #include <vtksys/CommandLineArguments.hxx>
 
-#include <vector>
-#include <string>
+#include <map>
+
 using namespace std;
+map<string, int> my_map = {
+    { "Gas", 0 },
+    { "Dark", 1 },
+    { "Star", 2 }
+};
+
 const vector<string> ptypes = {"gas", "dark", "star"};
 
 int
 vtkIOTipsyCxxTests(int argc, char **argv)
 {
-  string filein;
-  string varname, partname; // initialized empty
-  bool vis = false;
+  std::string filein;
+  std::string varname, partname;
+  bool vis = 0;
 
   double TimeStep = 0.0;
   int k, BlockIndex = 0;
@@ -97,7 +103,7 @@ vtkIOTipsyCxxTests(int argc, char **argv)
   if(vis)
     reader->GenerateVertexCellsOn();
   else
-    reader->GenerateVertexCellsOff();
+    reader->GenerateVertexCellsOn();
   reader->UpdateTimeStep(TimeStep); // time value
   reader->Update();
 
@@ -118,7 +124,6 @@ vtkIOTipsyCxxTests(int argc, char **argv)
   writer->Write();
   */
   
-
 if(vis)
   {
   vtkNew<vtkLookupTable> lut;
