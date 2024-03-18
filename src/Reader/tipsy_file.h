@@ -29,7 +29,6 @@
 
  */
 
-//#include "common/debug.h"
 #include <stdlib.h>
 #include <math.h>
 #include <fstream>
@@ -135,17 +134,26 @@ public:
   void Free_Sph_Buffer()
     {
     if(sph)
-      {free(sph); std::cout << "free(sph)...\n";}
+      {
+      free(sph);
+      //std::cout << "free(sph)...\n";
+      }
     }
   void Free_Dark_Buffer()
     {
     if(dark)
-      {free(dark); std::cout << "free(dark)...\n";}
+      {
+      free(dark);
+      //std::cout << "free(dark)...\n";
+      }
     }
   void Free_Star_Buffer()
     {
     if(star)
-      {free(star); std::cout << "free(star)...\n";}
+      {
+      free(star);
+      //std::cout << "free(star)...\n";
+      }
     }
 
   void FileClose()
@@ -203,16 +211,18 @@ public:
     {
     if(header_read)
       {
+/*
       std::cerr << __LINE__ << ": TipsyFile: "<< name << "\ntime=" << h.time 
                 << " nbodies=" << h.nbodies << " ndim=" << h.ndim 
                 << " nsph="<< h.nsph << " ndark=" << h.ndark 
                 << " nstar=" << h.nstar 
                 << ". SwapEndian = " << swap_endian << std::endl;
+*/
       return h.nbodies == (h.nsph + h.ndark + h.nstar);
       }
     else
       std::cerr << "TipsyFile: report_header(): havent read header yet\n";
-      return false;
+    return false;
     }
 
 void read_all(bool hasPad = true)
@@ -223,7 +233,7 @@ void read_all(bool hasPad = true)
     if(!header_read)
       read_header(hasPad);
     int base_offset = src.tellg();
-    std::cerr << __LINE__ << ": current_offset = " << src.tellg() << std::endl;
+    //std::cerr << __LINE__ << ": current_offset = " << src.tellg() << std::endl;
 // Alloc
     if(h.nsph > 0)
       sph = (gas_particle*)malloc(h.nsph*sizeof(gas_particle));
@@ -243,7 +253,7 @@ void read_all(bool hasPad = true)
 
 // by adding explicit seekg(), we make it possible to skip reading particles
 // of a particular type
-// Read sph
+  // Read sph
   if(h.nsph)
     {
     src.seekg(base_offset, src.beg);
@@ -251,57 +261,57 @@ void read_all(bool hasPad = true)
     if(swap_endian)
       {
 #ifdef USE_VTK_SWAP
-      vtkByteSwap::Swap4BERange(sph, h.nsph * sizeof(gas_particle)/sizeof(float));
+       vtkByteSwap::Swap4BERange(sph, h.nsph * sizeof(gas_particle)/sizeof(float));
 #else
-      gas_particle* pp = sph;
-      for(unsigned i = 0; i < h.nsph; i++, pp++)
+	  gas_particle* pp = sph;
+	  for(unsigned i = 0; i < h.nsph; i++, pp++)
         {
-        for(unsigned j = 0; j < sizeof(gas_particle)/sizeof(float); j++)
+	    for(unsigned j = 0; j < sizeof(gas_particle)/sizeof(float); j++)
 		  byteswap(&((float*)pp)[j]);
-        }
+	    }
 #endif
-      }
+	  }
     }
 
-// Read dark
-  if(h.ndark)
-    {
-    src.seekg(h.nsph * sizeof(gas_particle) + base_offset, src.beg);
-    src.read((char*)dark, h.ndark * sizeof(dark_particle));
-    if(swap_endian)
-      {
+	// Read dark
+	if(h.ndark)
+	{
+      src.seekg(h.nsph * sizeof(gas_particle) + base_offset, src.beg);
+	  src.read((char*)dark, h.ndark * sizeof(dark_particle));
+	  if(swap_endian)
+	    {
 #ifdef USE_VTK_SWAP
-      vtkByteSwap::Swap4BERange(dark, h.ndark * sizeof(dark_particle)/sizeof(float));
+       vtkByteSwap::Swap4BERange(dark, h.ndark * sizeof(dark_particle)/sizeof(float));
 #else
-      dark_particle* pp = dark;
-      for(unsigned i = 0; i < h.ndark; i++, pp++)
-        {
-        for(unsigned j = 0; j < sizeof(dark_particle)/sizeof(float); j++)
-          byteswap(&((float*)pp)[j]);
-        }
+	    dark_particle* pp = dark;
+	    for(unsigned i = 0; i < h.ndark; i++, pp++)
+	      {
+	      for(unsigned j = 0; j < sizeof(dark_particle)/sizeof(float); j++)
+		    byteswap(&((float*)pp)[j]);
+	      }
 #endif
-      }
-    }
+	    }
+	}
 
-// Read star
-  if(h.nstar)
-    {
-    src.seekg(h.nsph * sizeof(gas_particle) + h.ndark * sizeof(dark_particle) + base_offset, src.beg);
-    src.read((char*)star, h.nstar * sizeof(star_particle));
-    if(swap_endian)
-      {
+	// Read star
+	if(h.nstar)
+	{
+      src.seekg(h.nsph * sizeof(gas_particle) + h.ndark * sizeof(dark_particle) + base_offset, src.beg);
+	  src.read((char*)star, h.nstar * sizeof(star_particle));
+	  if(swap_endian)
+	    {
 #ifdef USE_VTK_SWAP
-      vtkByteSwap::Swap4BERange(star, h.nstar * sizeof(star_particle)/sizeof(float));
+       vtkByteSwap::Swap4BERange(star, h.nstar * sizeof(star_particle)/sizeof(float));
 #else
-      star_particle* pp = star;
-      for(unsigned i = 0; i < h.nstar; i++, pp++)
-        {
-        for(unsigned j = 0; j < sizeof(star_particle)/sizeof(float); j++)
-          byteswap(&((float*)pp)[j]);
-        }
+	    star_particle* pp = star;
+	    for(unsigned i = 0; i < h.nstar; i++, pp++)
+	      {
+	      for(unsigned j = 0; j < sizeof(star_particle)/sizeof(float); j++)
+		    byteswap(&((float*)pp)[j]);
+	      }
 #endif
-      }
-    }
+	    }
+	}
 
   std::cout << __LINE__ << ": TipsyFile: read file " << name
             << "\nnbodies: " << h.nbodies
@@ -309,7 +319,7 @@ void read_all(bool hasPad = true)
             << "\nndark: " << h.ndark
             << "\nnstar: " << h.nstar
             << "\nswapped endian: " << swap_endian << std::endl;
-}
+  }
 
 int split_particlesSet(int N, int piece, int numPieces, int& standard_load)
   {
@@ -335,7 +345,7 @@ void read_gas_piece(int piece, int numPieces, int &n1, bool hasPad = true)
   int load, standard_load[3]={0,0,0};
 
   if(!src.is_open())
-    std::cerr << "TipsyFile: read_gas_piece(): file is not open\n";
+    std::cerr << "TipsyFile: read_all(): file is not open\n";
 
   long base_offset = sizeof(header);
 
@@ -343,7 +353,7 @@ void read_gas_piece(int piece, int numPieces, int &n1, bool hasPad = true)
     {
     n1 = split_particlesSet(h.nsph, piece, numPieces, standard_load[0]);
     sph = (gas_particle*)malloc(n1 * sizeof(gas_particle));
-    std::cerr << "CPU " << piece << " allocating " << n1  << " SPH  particles of size " << sizeof(gas_particle)  << "= " << n1*sizeof(gas_particle) << "\n";
+    //std::cerr << "CPU " << piece << " allocating " << n1  << " SPH  particles of size " << sizeof(gas_particle)  << "= " << n1*sizeof(gas_particle) << "\n";
     }
   else n1=0;
 
@@ -366,16 +376,16 @@ void read_gas_piece(int piece, int numPieces, int &n1, bool hasPad = true)
     if(swap_endian)
       {
 #ifdef USE_VTK_SWAP
-      vtkByteSwap::Swap4BERange(sph, n1 * sizeof(gas_particle)/sizeof(float));
+       vtkByteSwap::Swap4BERange(sph, n1 * sizeof(gas_particle)/sizeof(float));
 #else
-      gas_particle* pp = sph;
-      for(unsigned i = 0; i < n1; i++, pp++)
+	  gas_particle* pp = sph;
+	  for(unsigned i = 0; i < n1; i++, pp++)
         {
-        for(unsigned j = 0; j < sizeof(gas_particle)/sizeof(float); j++)
-          byteswap(&((float*)pp)[j]);
-        }
+	    for(unsigned j = 0; j < sizeof(gas_particle)/sizeof(float); j++)
+		  byteswap(&((float*)pp)[j]);
+	    }
 #endif
-      }
+	  }
 /*
     float min= 1e30;
     float max=-min;
@@ -398,13 +408,13 @@ void read_gas_piece(int piece, int numPieces, int &n1, bool hasPad = true)
     errs << "Mass SPH: min=" << min << ", max="<< max << endl;
 */
     }
+
   std::cout << __LINE__ << ": TipsyFile: read file " << name
             << "\nnbodies: " << h.nbodies
             << "\nnsph: " << h.nsph
             << "\nndark: " << h.ndark
             << "\nnstar: " << h.nstar
             << "\nswapped endian: " << swap_endian << std::endl;
-
 } // read_gas_piece()
 
 void read_dark_matter_piece(int piece, int numPieces, int &n2, bool hasPad = true)
@@ -413,7 +423,7 @@ void read_dark_matter_piece(int piece, int numPieces, int &n2, bool hasPad = tru
   int load, standard_load[3]={0,0,0};
 
   if(!src.is_open())
-    std::cerr << "TipsyFile: read_dark_matter_piece(): file is not open\n";
+    std::cerr << "TipsyFile: read_all(): file is not open\n";
 
   long base_offset = sizeof(header);
 
@@ -421,7 +431,7 @@ void read_dark_matter_piece(int piece, int numPieces, int &n2, bool hasPad = tru
     {
     n2 = split_particlesSet(h.ndark, piece, numPieces, standard_load[1]);
     dark = (dark_particle*)malloc(n2*sizeof(dark_particle));
-    std::cerr << "CPU " << piece << " allocating " << n2  << " DARK particles of size " << sizeof(dark_particle) << "= " << n2*sizeof(dark_particle)<< "\n";
+    //std::cerr << "CPU " << piece << " allocating " << n2  << " DARK particles of size " << sizeof(dark_particle) << "= " << n2*sizeof(dark_particle)<< "\n";
     }
   else n2=0;
 
@@ -442,7 +452,6 @@ void read_dark_matter_piece(int piece, int numPieces, int &n2, bool hasPad = tru
 
     src.read((char*)dark, n2 * sizeof(dark_particle));
 
-    std::cerr << "offset reading DARK: " << offset << std::endl;
     if(n2 * sizeof(dark_particle) != src.gcount())
       std::cerr << "ERROR reading DARK: only " << src.gcount() << " read. instead of "<< n2 * sizeof(dark_particle) << std::endl;
 
@@ -468,7 +477,7 @@ void read_star_piece(int piece, int numPieces, int &n3, bool hasPad = true)
   int load, standard_load[3]={0,0,0};
 
   if(!src.is_open())
-    std::cerr << "TipsyFile: read_star_piece(): file is not open\n";
+    std::cerr << "TipsyFile: read_all(): file is not open\n";
 
   long base_offset = sizeof(header);
 
@@ -476,7 +485,7 @@ void read_star_piece(int piece, int numPieces, int &n3, bool hasPad = true)
     {
     n3 = split_particlesSet(h.nstar, piece, numPieces, standard_load[2]);
     star = (star_particle*)malloc(n3*sizeof(star_particle));
-    std::cerr << "CPU " << piece << " allocating " << n3  << " STAR particles of size " << sizeof(star_particle) << "= " << n3*sizeof(star_particle)<< "\n";
+    //std::cerr << "CPU " << piece << " allocating " << n3  << " STAR particles of size " << sizeof(star_particle) << "= " << n3*sizeof(star_particle)<< "\n";
     }
   else n3=0;
 
@@ -498,7 +507,6 @@ void read_star_piece(int piece, int numPieces, int &n3, bool hasPad = true)
 
     src.read((char*)star, n3 * sizeof(star_particle));
 
-    std::cerr << "offset reading STAR: " << offset << std::endl;
     if(n3 * sizeof(star_particle) != src.gcount())
       std::cerr << "ERROR reading STAR: only " << src.gcount() << " read. instead of "<< n3 * sizeof(star_particle) << std::endl;
 
@@ -572,7 +580,7 @@ void write(std::string name, bool hasPad = true)
 
   out.close();
   };
-
+  
 private:
 #ifndef USE_VTK_SWAP
 template <typename T>

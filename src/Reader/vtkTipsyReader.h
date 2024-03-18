@@ -33,8 +33,9 @@ class vtkTipsyReader : public vtkPartitionedDataSetCollectionAlgorithm
 {
 public:
   static vtkTipsyReader *New();
-  vtkTypeMacro(vtkTipsyReader, vtkPartitionedDataSetCollectionAlgorithm);   
+  vtkTypeMacro(vtkTipsyReader, vtkPartitionedDataSetCollectionAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent) override;
+
   vtkSetStringMacro(FileName);
   vtkGetStringMacro(FileName);
 
@@ -84,7 +85,6 @@ public:
     // other methods.
     virtual void SetController(vtkMultiProcessController* controller);
     vtkGetObjectMacro(Controller, vtkMultiProcessController);
-
 #endif
     int CanReadFile(const char* fname);
 
@@ -93,9 +93,7 @@ protected:
   ~vtkTipsyReader() override;
   //
   int   RequestInformation(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
-  int   RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
-  int   RequestDataObject(vtkInformation* request, vtkInformationVector** inputVector,
-    vtkInformationVector* outputVector) override;
+  int   RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *)  override;
   int   OpenFile();
   void  CloseFile();
   vtkPolyData* Read_Gas(int N);
@@ -103,7 +101,6 @@ protected:
   vtkPolyData* Read_Stars(int N);
   vtkFloatArray* GetVTKScalarArray(const char *name, unsigned int N, float *fp, unsigned int poffset);
   vtkFloatArray* GetVTKVectorArray(const char *name, unsigned int N, float *fp, unsigned int poffset);
-  //
   // Internal Variables
   //
   char         *FileName;
@@ -122,8 +119,6 @@ protected:
 
   // To allow ParaView GUI to enable/disable scalar reading
   vtkDataArraySelection* PointDataArraySelection;
-  // To allow paraview gui to enable/disable block (particle type) selective reading
-  // vtkDataArraySelection* ParticleTypeSelection;
 
   #ifdef PARAVIEW_USE_MPI
   vtkMultiProcessController* Controller;
