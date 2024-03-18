@@ -3,11 +3,11 @@
   Program:   ParaView
   Module:    vtkTipsyReader.cxx
 
-
 =========================================================================*/
 
 #include "vtkTipsyReader.h"
 
+#include "vtkCellType.h"
 #include "vtkDataArray.h"
 #include "vtkDataArraySelection.h"
 #include "vtkFloatArray.h"
@@ -35,6 +35,7 @@ vtkCxxSetObjectMacro(vtkTipsyReader, Controller, vtkMultiProcessController);
 #include <algorithm>
 #include <functional>
 #include <numeric>
+
 #include "tipsy_file.h"
 
 //----------------------------------------------------------------------------
@@ -115,22 +116,6 @@ int vtkTipsyReader::OpenFile()
   return 1;
 }
 
-//------------------------------------------------------------------------
-int vtkTipsyReader::RequestDataObject(vtkInformation* vtkNotUsed(request),
-  vtkInformationVector** vtkNotUsed(inputVector), vtkInformationVector* outputVector)
-{
-  vtkInformation* outInfo = outputVector->GetInformationObject(0);
-  vtkPartitionedDataSetCollection* output =
-    vtkPartitionedDataSetCollection::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
-  if (!output)
-  {
-    output = vtkPartitionedDataSetCollection::New();
-    outInfo->Set(vtkDataObject::DATA_OBJECT(), output);
-    output->Delete();
-  }
-  return 1;
-}
-
 //----------------------------------------------------------------------------
 int vtkTipsyReader::RequestInformation(
   vtkInformation *vtkNotUsed(request),
@@ -193,6 +178,7 @@ vtkTipsyReader::GetVTKScalarArray(const char *name, unsigned int N, float *fp, u
     fp += fpoffset;
     }
   return vtkarray;
+
 }
 
 vtkFloatArray *
@@ -216,15 +202,17 @@ vtkTipsyReader::GetVTKVectorArray(const char *name, unsigned int N, float *fp, u
   return vtkarray;
 }
 
-vtkPolyData *vtkTipsyReader::Read_Gas(int N)
+vtkPolyData* vtkTipsyReader::Read_Gas(int N)
 {
-  vtkPolyData *output = vtkPolyData::New();
   if(N)
   {
-  unsigned int fpoffset = sizeof(gas_particle)/sizeof(float);
-  float *fp = (float *)this->Tipsyfile->sph + 1;
-  vtkFloatArray *coords = GetVTKVectorArray("coords", N, fp, fpoffset);
+  vtkPolyData *output = vtkPolyData::New();
+  float *fp = (float *)this->Tipsyfile->sph;
+  unsigned int fpoffset;
 
+  fpoffset = sizeof(gas_particle)/sizeof(float);
+  // x,y,z are offset by 1 float
+  vtkFloatArray *coords = GetVTKVectorArray("coords", N, fp+1, fpoffset);
   vtkPoints *points = vtkPoints::New();
   points->SetData(coords);
   output->SetPoints(points);
@@ -234,50 +222,43 @@ vtkPolyData *vtkTipsyReader::Read_Gas(int N)
   vtkPointData *pd = output->GetPointData();
   if(this->GetPointArrayStatus("mass"))
     {
-    float *fp = (float *)this->Tipsyfile->sph + 0;
     vtkFloatArray *data = GetVTKScalarArray("mass", N, fp, fpoffset);
     pd->AddArray(data); data->Delete();
     }
 
   if(this->GetPointArrayStatus("vel"))
     {
-    float *fp = (float *)this->Tipsyfile->sph + 4;
-    vtkFloatArray *data = GetVTKVectorArray("vel", N, fp, fpoffset);
+    vtkFloatArray *data = GetVTKVectorArray("vel", N, fp+4, fpoffset);
     pd->AddArray(data); data->Delete();
     }
 
   if(this->GetPointArrayStatus("rho"))
     {
-    float *fp = (float *)this->Tipsyfile->sph + 7;
-    vtkFloatArray *data = GetVTKScalarArray("rho", N, fp, fpoffset);
+    vtkFloatArray *data = GetVTKScalarArray("rho", N, fp+7, fpoffset);
     pd->AddArray(data); data->Delete();
     }
 
   if(this->GetPointArrayStatus("temp"))
     {
-    float *fp = (float *)this->Tipsyfile->sph + 8;
-    vtkFloatArray *data = GetVTKScalarArray("temp", N, fp, fpoffset);
+    vtkFloatArray *data = GetVTKScalarArray("temp", N, fp+8, fpoffset);
     pd->AddArray(data); data->Delete();
     }
 
   if(this->GetPointArrayStatus("hsmooth"))
     {
-    float *fp = (float *)this->Tipsyfile->sph + 9;
-    vtkFloatArray *data = GetVTKScalarArray("hsmooth", N, fp, fpoffset);
+    vtkFloatArray *data = GetVTKScalarArray("hsmooth", N, fp+9, fpoffset);
     pd->AddArray(data); data->Delete();
     }
-      
+
   if(this->GetPointArrayStatus("metals"))
     {
-    float *fp = (float *)this->Tipsyfile->sph + 10;
-    vtkFloatArray *data = GetVTKScalarArray("metals", N, fp, fpoffset);
+    vtkFloatArray *data = GetVTKScalarArray("metals", N, fp+10, fpoffset);
     pd->AddArray(data); data->Delete();
     }
 
   if(this->GetPointArrayStatus("phi"))
     {
-    float *fp = (float *)this->Tipsyfile->sph + 11;
-    vtkFloatArray *data = GetVTKScalarArray("phi", N, fp, fpoffset);
+    vtkFloatArray *data = GetVTKScalarArray("phi", N, fp+11, fpoffset);
     pd->AddArray(data); data->Delete();
     }
 
@@ -294,22 +275,20 @@ vtkPolyData *vtkTipsyReader::Read_Gas(int N)
     }
   return output;
   }
-  else
-  {
-    return nullptr;
-  }
+  else return nullptr;
 } // Read_Gas
 
 vtkPolyData *vtkTipsyReader::Read_DarkMatter(int N)
 {
-  vtkPolyData *output = vtkPolyData::New();
   if(N)
   {
-  float *fp = (float *)this->Tipsyfile->dark + 1;
-  unsigned int fpoffset = sizeof(dark_particle)/sizeof(float);
+  vtkPolyData *output = vtkPolyData::New();
+  float *fp = (float *)this->Tipsyfile->dark;
+  unsigned int fpoffset;
 
-  vtkFloatArray *coords = GetVTKVectorArray("coords", N, fp, fpoffset);
-
+  fpoffset = sizeof(dark_particle)/sizeof(float);
+  // x,y,z are offset by 1 float
+  vtkFloatArray *coords = GetVTKVectorArray("coords", N, fp+1, fpoffset);
   vtkPoints *points = vtkPoints::New();
   points->SetData(coords);
   output->SetPoints(points);
@@ -319,20 +298,17 @@ vtkPolyData *vtkTipsyReader::Read_DarkMatter(int N)
   vtkPointData *pd = output->GetPointData();
   if(this->GetPointArrayStatus("mass"))
     {
-    float *fp = (float *)this->Tipsyfile->dark + 0;
     vtkFloatArray *data = GetVTKScalarArray("mass", N, fp, fpoffset);
     pd->AddArray(data); data->Delete();
     }
   if(this->GetPointArrayStatus("phi"))
     {
-    float *fp = (float *)this->Tipsyfile->dark + 8;
-    vtkFloatArray *data = GetVTKScalarArray("phi", N, fp, fpoffset);
+    vtkFloatArray *data = GetVTKScalarArray("phi", N, fp+8, fpoffset);
     pd->AddArray(data); data->Delete();
     }
   if(this->GetPointArrayStatus("vel"))
     {
-    float *fp = (float *)this->Tipsyfile->dark + 4;
-    vtkFloatArray *data = GetVTKVectorArray("vel", N, fp, fpoffset);
+    vtkFloatArray *data = GetVTKVectorArray("vel", N, fp+4, fpoffset);
     pd->AddArray(data); data->Delete();
     }
 
@@ -349,21 +325,21 @@ vtkPolyData *vtkTipsyReader::Read_DarkMatter(int N)
     }
   return output;
   }
-  else
-  {
-    return nullptr;
-  }
+  else return nullptr;
 } // Read_DarkMatter
 
 vtkPolyData *vtkTipsyReader::Read_Stars(int N)
 {
-  vtkPolyData *output = vtkPolyData::New();
   if(N)
   {
-  unsigned int fpoffset = sizeof(star_particle)/sizeof(float);
-  float *fp = (float *)this->Tipsyfile->star + 1;
-  vtkFloatArray *coords = GetVTKVectorArray("coords", N, fp, fpoffset);
+  vtkPolyData *output = vtkPolyData::New();
+  float *fp = (float *)this->Tipsyfile->star;;
+  unsigned int fpoffset;
 
+  fpoffset = sizeof(star_particle)/sizeof(float);
+  
+  // x,y,z are offset by 1 float
+  vtkFloatArray *coords = GetVTKVectorArray("coords", N, fp+1, fpoffset);
   vtkPoints *points = vtkPoints::New();
   points->SetData(coords);
   output->SetPoints(points);
@@ -371,29 +347,26 @@ vtkPolyData *vtkTipsyReader::Read_Stars(int N)
   points->Delete();
 
   vtkPointData *pd = output->GetPointData();
-  if(this->GetPointArrayStatus("mass"))
+    if(this->GetPointArrayStatus("mass"))
     {
-    float *fp = (float *)this->Tipsyfile->star + 0;
     vtkFloatArray *data = GetVTKScalarArray("mass", N, fp, fpoffset);
     pd->AddArray(data); data->Delete();
     }
   if(this->GetPointArrayStatus("phi"))
     {
-    float *fp = (float *)this->Tipsyfile->star + 10;
-    vtkFloatArray *data = GetVTKScalarArray("phi", N, fp, fpoffset);
+    vtkFloatArray *data = GetVTKScalarArray("phi", N, fp+10, fpoffset);
     pd->AddArray(data); data->Delete();
     }
   if(this->GetPointArrayStatus("vel"))
     {
-    float *fp = (float *)this->Tipsyfile->star + 4;
-    vtkFloatArray *data = GetVTKVectorArray("vel", N, fp, fpoffset);
+    vtkFloatArray *data = GetVTKVectorArray("vel", N, fp+4, fpoffset);
     pd->AddArray(data); data->Delete();
     }
 
   if (this->GenerateVertexCells)
     {
     vtkIdList *list = vtkIdList::New();
-    std::cerr << __LINE__ << ": Allocating ID list of size "<< N << "*"
+    std::cout << __LINE__ << ": Allocating ID list of size "<< N << "*"
               << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType) << " bytes\n";
     list->SetNumberOfIds(N);
     std::iota(list->GetPointer(0), list->GetPointer(N), 0);
@@ -403,10 +376,7 @@ vtkPolyData *vtkTipsyReader::Read_Stars(int N)
     }
   return output;
   }
-  else
-  {
-    return nullptr;
-  }
+  else return nullptr;
 } // Read_Stars
 
 int vtkTipsyReader::RequestData(
@@ -417,7 +387,6 @@ int vtkTipsyReader::RequestData(
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
   auto output =
     vtkPartitionedDataSetCollection::SafeDownCast(vtkDataObject::GetData(outputVector, 0));
-
 #ifdef PARAVIEW_USE_MPI
   if (this->Controller &&
       (this->UpdatePiece != this->Controller->GetLocalProcessId() ||
@@ -438,42 +407,35 @@ int vtkTipsyReader::RequestData(
     }
   this->Tipsyfile->read_header();
   int n[3] = {0,0,0};
-  
-  vtkPolyData *pd;
+
   if(this->ParticleType == TIPSY_TYPE_GAS)
     {
-    output->SetNumberOfPartitionedDataSets(1);
-    output->SetNumberOfPartitions(0, 1);
     n[0] = 1;
     this->Tipsyfile->read_gas_piece(this->UpdatePiece, this->UpdateNumPieces, n[0]);
-    pd = this->Read_Gas(n[0]);
-    output->SetPartition(0, 0, pd);
-    pd->Delete();
+    vtkPolyData *gas = this->Read_Gas(n[0]);
+    output->SetPartition(0, 0, gas);
     output->GetMetaData(0u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_GAS]);
+    gas->Delete();
     this->Tipsyfile->Free_Sph_Buffer();
     }
  else if(this->ParticleType == TIPSY_TYPE_DARK)
     {
-    output->SetNumberOfPartitionedDataSets(1);
-    output->SetNumberOfPartitions(0, 1);
     n[1] = 1;
     this->Tipsyfile->read_dark_matter_piece(this->UpdatePiece, this->UpdateNumPieces, n[1]);
-    pd = this->Read_DarkMatter(n[1]);
-    output->SetPartition(0, 0, pd);
-    pd->Delete();
+    vtkPolyData *darkmatter = this->Read_DarkMatter(n[1]);
+    output->SetPartition(0, 0, darkmatter);
     output->GetMetaData(0u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_DARK]);
+    darkmatter->Delete();
     this->Tipsyfile->Free_Dark_Buffer();
     }
   else if(this->ParticleType == TIPSY_TYPE_STAR)
     {
-    output->SetNumberOfPartitionedDataSets(1);
-    output->SetNumberOfPartitions(0, 1);
     n[2] = 1;
     this->Tipsyfile->read_star_piece(this->UpdatePiece, this->UpdateNumPieces, n[2]);
-    pd = this->Read_Stars(n[2]);
-    output->SetPartition(0, 0, pd);
-    pd->Delete();
+    vtkPolyData *stars = this->Read_Stars(n[2]);
+    output->SetPartition(0, 0, stars);
     output->GetMetaData(0u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_STAR]);
+    stars->Delete();
     this->Tipsyfile->Free_Star_Buffer();
     }
   else if(this->ParticleType == TIPSY_TYPE_ALL)
@@ -484,18 +446,35 @@ int vtkTipsyReader::RequestData(
     output->SetNumberOfPartitions(2, 1);
     n[0] = 1;
     this->Tipsyfile->read_gas_piece(this->UpdatePiece, this->UpdateNumPieces, n[0]);
-    output->SetPartition(0, 0, this->Read_Gas(n[0]));
-    output->GetMetaData(0u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_GAS]);
+    vtkPolyData *gas = this->Read_Gas(n[0]);
+    if(gas)
+      {
+      output->SetPartition(0, 0, gas);
+      output->GetMetaData(0u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_GAS]);
+      gas->Delete();
+      }
     this->Tipsyfile->Free_Sph_Buffer();
+    
     n[1] = 1;
     this->Tipsyfile->read_dark_matter_piece(this->UpdatePiece, this->UpdateNumPieces, n[1]);
-    output->SetPartition(1, 0, this->Read_DarkMatter(n[1]));
-    output->GetMetaData(1u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_DARK]);
+    vtkPolyData *darkmatter = this->Read_DarkMatter(n[1]);
+    if(darkmatter)
+      {
+      output->SetPartition(1, 0, darkmatter);
+      output->GetMetaData(1u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_DARK]);
+      darkmatter->Delete();
+      }
     this->Tipsyfile->Free_Dark_Buffer();
+    
     n[2] = 1;
     this->Tipsyfile->read_star_piece(this->UpdatePiece, this->UpdateNumPieces, n[2]);
-    output->SetPartition(2, 0, this->Read_Stars(n[2]));
-    output->GetMetaData(2u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_STAR]);
+    vtkPolyData *stars = this->Read_Stars(n[2]);
+    if(stars)
+      {
+      output->SetPartition(2, 0, stars);
+      output->GetMetaData(2u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_STAR]);
+      stars->Delete();
+      }
     this->Tipsyfile->Free_Star_Buffer();
     }
   this->CloseFile();
