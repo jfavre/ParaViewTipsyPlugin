@@ -10,6 +10,8 @@
 #ifndef vtkTipsyReader_h
 #define vtkTipsyReader_h
 
+#include "vtkIOTipsyModule.h" // for export macro
+
 #include "vtkPartitionedDataSetCollectionAlgorithm.h"
 #include <string>
 #include <vector>
@@ -29,7 +31,7 @@ class vtkMultiProcessController;
 #define TIPSY_TYPE_ALL 3
 static std::vector<std::string> ParticleTypes = {"Gas", "Dark", "Star"};
 
-class vtkTipsyReader : public vtkPartitionedDataSetCollectionAlgorithm
+class VTKIOTIPSY_EXPORT vtkTipsyReader : public vtkPartitionedDataSetCollectionAlgorithm
 {
 public:
   static vtkTipsyReader *New();

@@ -2,43 +2,39 @@
 VTK_MODULE_INIT(vtkRenderingOpenGL2); // VTK was built with vtkRenderingOpenGL2
 VTK_MODULE_INIT(vtkInteractionStyle);
 
-#include "vtkActor.h"
-#include "vtkDataSet.h"
-#include "vtkDataSetWriter.h"
 #include "vtkTipsyReader.h"
+
+#include "vtkActor.h"
 #include "vtkGeometryFilter.h"
 #include "vtkInformation.h"
 #include "vtkLookupTable.h"
+#include "vtkNew.h"
 #include "vtkPartitionedDataSetCollection.h"
 #include "vtkPartitionedDataSet.h"
-#include "vtkNew.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkPolyDataMapper.h"
+#include "vtkRegressionTestImage.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
+#include <vtksys/CommandLineArguments.hxx>
+#include <vtksys/SystemTools.hxx>
+#include "vtkTestUtilities.h"
 #include "vtkUnstructuredGrid.h"
 
-#include <vtksys/SystemTools.hxx>
-#include <vtksys/CommandLineArguments.hxx>
-
 #include <map>
+#include <string>
 
 using namespace std;
-map<string, int> my_map = {
-    { "Gas", 0 },
-    { "Dark", 1 },
-    { "Star", 2 }
-};
 
 const vector<string> ptypes = {"gas", "dark", "star"};
 
 int
-vtkIOTipsyCxxTests(int argc, char **argv)
+TestSimpleTipsyReader(int argc, char* argv[])
 {
-  std::string filein;
-  std::string varname, partname;
+  string filein;
+  string varname, partname;
   bool vis = 0;
 
   double TimeStep = 0.0;
@@ -109,20 +105,12 @@ vtkIOTipsyCxxTests(int argc, char **argv)
 
   double range[2];
       
-  vtkDataSet *FirstBlock = static_cast<vtkDataSet *>(reader->GetOutput()->GetPartitionedDataSet(0)->GetPartition(BlockIndex));
+  vtkUnstructuredGrid *FirstBlock = static_cast<vtkUnstructuredGrid *>(reader->GetOutput()->GetPartitionedDataSet(0)->GetPartition(BlockIndex));
   if(varname.size())
     {
     FirstBlock->GetPointData()->GetArray(0)->GetRange(range);
     cerr << varname.c_str() << ": scalar range = [" << range[0] << ", " << range[1] << "]\n";
     }
-  //cout << *reader;
-  /*
-  VTK_CREATE(vtkDataSetWriter, writer);
-  writer->SetInputData(FirstBlock);
-  writer->SetFileTypeToBinary();
-  writer->SetFileName("/tmp/foo.vtk");
-  writer->Write();
-  */
   
 if(vis)
   {
@@ -176,8 +164,7 @@ if(vis)
 }
 
 int
-main(int argc, char **argv)
+main(int argc, char* argv[])
 {
-  vtkIOTipsyCxxTests(argc, argv);
+  return TestSimpleTipsyReader(argc, argv);
 }
-

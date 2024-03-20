@@ -1,10 +1,12 @@
 NAME
-  TipsyReader
+  IOTipsy
 LIBRARY_NAME
-  TipsyReader
+  vtkIOTipsy
 DEPENDS
   VTK::CommonCore
   VTK::CommonExecutionModel
   VTK::FiltersGeometry
 PRIVATE_DEPENDS
   VTK::vtksys
+TEST_DEPENDS
+  VTK::TestingRendering

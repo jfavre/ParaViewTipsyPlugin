@@ -1,12 +1,9 @@
 set(classes
   vtkTipsyReader)
 
-set(private_headers
-  vtkTipsyReader.h)
-
-vtk_module_add_module(TipsyReader
+vtk_module_add_module(IOTipsy
   CLASSES ${classes}
-  PRIVATE_HEADERS ${private_headers})
+  )
 
 paraview_add_server_manager_xmls(
   XMLS  Tipsy_Server.xml)

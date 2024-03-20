@@ -1,6 +1,6 @@
-ADD_EXECUTABLE(TestSimpleTipsyReader TestSimpleTipsyReader.cxx)
-TARGET_LINK_LIBRARIES(TestSimpleTipsyReader
-	PUBLIC TipsyReader
+add_executable(TestSimpleTipsyReader TestSimpleTipsyReader.cxx)
+target_link_libraries(TestSimpleTipsyReader
+	PUBLIC IOTipsy
 	PRIVATE
 	  VTK::InteractionStyle
 	  VTK::RenderingCore
