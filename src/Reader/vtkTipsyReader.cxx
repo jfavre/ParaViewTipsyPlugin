@@ -408,37 +408,37 @@ int vtkTipsyReader::RequestData(
   this->Tipsyfile->read_header();
   int n[3] = {0,0,0};
 
-  if(this->ParticleType == TIPSY_TYPE_GAS)
+  if(this->ParticleType == particleType::Gas)
     {
     n[0] = 1;
     this->Tipsyfile->read_gas_piece(this->UpdatePiece, this->UpdateNumPieces, n[0]);
     vtkPolyData *gas = this->Read_Gas(n[0]);
     output->SetPartition(0, 0, gas);
-    output->GetMetaData(0u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_GAS]);
+    output->GetMetaData(0u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[particleType::Gas]);
     gas->Delete();
     this->Tipsyfile->Free_Sph_Buffer();
     }
- else if(this->ParticleType == TIPSY_TYPE_DARK)
+ else if(this->ParticleType == particleType::Dark)
     {
     n[1] = 1;
     this->Tipsyfile->read_dark_matter_piece(this->UpdatePiece, this->UpdateNumPieces, n[1]);
     vtkPolyData *darkmatter = this->Read_DarkMatter(n[1]);
     output->SetPartition(0, 0, darkmatter);
-    output->GetMetaData(0u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_DARK]);
+    output->GetMetaData(0u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[particleType::Dark]);
     darkmatter->Delete();
     this->Tipsyfile->Free_Dark_Buffer();
     }
-  else if(this->ParticleType == TIPSY_TYPE_STAR)
+  else if(this->ParticleType == particleType::Star)
     {
     n[2] = 1;
     this->Tipsyfile->read_star_piece(this->UpdatePiece, this->UpdateNumPieces, n[2]);
     vtkPolyData *stars = this->Read_Stars(n[2]);
     output->SetPartition(0, 0, stars);
-    output->GetMetaData(0u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_STAR]);
+    output->GetMetaData(0u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[particleType::Star]);
     stars->Delete();
     this->Tipsyfile->Free_Star_Buffer();
     }
-  else if(this->ParticleType == TIPSY_TYPE_ALL)
+  else if(this->ParticleType == particleType::All)
     {
     output->SetNumberOfPartitionedDataSets(3);
     output->SetNumberOfPartitions(0, 1);
@@ -450,7 +450,7 @@ int vtkTipsyReader::RequestData(
     if(gas)
       {
       output->SetPartition(0, 0, gas);
-      output->GetMetaData(0u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_GAS]);
+      output->GetMetaData(0u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[particleType::Gas]);
       gas->Delete();
       }
     this->Tipsyfile->Free_Sph_Buffer();
@@ -461,7 +461,7 @@ int vtkTipsyReader::RequestData(
     if(darkmatter)
       {
       output->SetPartition(1, 0, darkmatter);
-      output->GetMetaData(1u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_DARK]);
+      output->GetMetaData(1u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[particleType::Dark]);
       darkmatter->Delete();
       }
     this->Tipsyfile->Free_Dark_Buffer();
@@ -472,7 +472,7 @@ int vtkTipsyReader::RequestData(
     if(stars)
       {
       output->SetPartition(2, 0, stars);
-      output->GetMetaData(2u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[TIPSY_TYPE_STAR]);
+      output->GetMetaData(2u)->Set(vtkCompositeDataSet::NAME(), ParticleTypes[particleType::Star]);
       stars->Delete();
       }
     this->Tipsyfile->Free_Star_Buffer();

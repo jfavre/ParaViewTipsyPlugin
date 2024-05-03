@@ -24,11 +24,7 @@ class vtkFloatArray;
 class vtkPolyData;
 class vtkMultiProcessController;
 
-//enum class particleType {Gas=0, Dark=1, Star=2, All=3};
-#define TIPSY_TYPE_GAS 0
-#define TIPSY_TYPE_DARK 1
-#define TIPSY_TYPE_STAR 2
-#define TIPSY_TYPE_ALL 3
+enum particleType :int {Gas=0, Dark=1, Star=2, All=3};
 static std::vector<std::string> ParticleTypes = {"Gas", "Dark", "Star"};
 
 class VTKIOTIPSY_EXPORT vtkTipsyReader : public vtkPartitionedDataSetCollectionAlgorithm
@@ -46,12 +42,12 @@ public:
   vtkSetMacro(TimeStep,int);
   vtkGetMacro(TimeStep,int);
 
-  vtkSetClampMacro(ParticleType, int, TIPSY_TYPE_GAS, TIPSY_TYPE_ALL);
+  vtkSetClampMacro(ParticleType, int, particleType::Gas, particleType::All);
   vtkGetMacro(ParticleType, int);
-  void SetParticleTypeToGas() { this->SetParticleType(TIPSY_TYPE_GAS); }
-  void SetParticleTypeToDark() { this->SetParticleType(TIPSY_TYPE_DARK); }
-  void SetParticleTypeToStar() { this->SetParticleType(TIPSY_TYPE_STAR); }
-  void SetParticleTypeToAll() { this->SetParticleType(TIPSY_TYPE_ALL); }
+  void SetParticleTypeToGas() { this->SetParticleType(particleType::Gas); }
+  void SetParticleTypeToDark() { this->SetParticleType(particleType::Dark); }
+  void SetParticleTypeToStar() { this->SetParticleType(particleType::Star); }
+  void SetParticleTypeToAll() { this->SetParticleType(particleType::All); }
   
   // Description:
   // When set (default no), the reader will generate a vertex cell
