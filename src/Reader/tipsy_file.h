@@ -410,10 +410,11 @@ void read_gas_piece(int piece, int numPieces, int &n1, bool hasPad = true)
     }
 
   std::cout << __LINE__ << ": TipsyFile: read file " << name
+            << "\ntime   : " << h.time
             << "\nnbodies: " << h.nbodies
-            << "\nnsph: " << h.nsph
-            << "\nndark: " << h.ndark
-            << "\nnstar: " << h.nstar
+            << "\nnsph   : " << h.nsph
+            << "\nndark  : " << h.ndark
+            << "\nnstar  : " << h.nstar
             << "\nswapped endian: " << swap_endian << std::endl;
 } // read_gas_piece()
 
