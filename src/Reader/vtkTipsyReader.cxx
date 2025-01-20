@@ -7,11 +7,13 @@
 
 #include "vtkTipsyReader.h"
 
+#include "vtkAffineArray.h"
 #include "vtkCellType.h"
 #include "vtkDataArray.h"
 #include "vtkDataArraySelection.h"
 #include "vtkFloatArray.h"
 #include "vtkIdList.h"
+#include "vtkIdTypeArray.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkPartitionedDataSet.h"
@@ -264,14 +266,35 @@ vtkPolyData* vtkTipsyReader::Read_Gas(int N)
 
   if (this->GenerateVertexCells)
     {
-    vtkIdList *list = vtkIdList::New();
+    
+    vtkIdList *id_list = vtkIdList::New();
     std::cout << __LINE__ << ": Allocating ID list of size "<< N << "*"
               << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType) << " bytes\n";
-    list->SetNumberOfIds(N);
-    std::iota(list->GetPointer(0), list->GetPointer(N), 0);
+    id_list->SetNumberOfIds(N);
+    std::iota(id_list->GetPointer(0), id_list->GetPointer(N), 0);
     output->Allocate(1);
-    output->InsertNextCell(VTK_POLY_VERTEX, list);
-    list->Delete();
+    output->InsertNextCell(VTK_POLY_VERTEX, id_list);
+    id_list->Delete();
+    
+#ifndef OLD
+/*
+          std::cout << __LINE__ << ": Allocating std::vector of size "<< N << "*"
+              << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType) << " bytes\n";
+      std::vector<vtkIdType> polyVertex(N);
+      std::iota(polyVertex.begin(), polyVertex.end(), 0);
+      vtkNew<vtkCellArray> verts;
+      verts->InsertNextCell(N, polyVertex.data());
+      output->SetVerts(verts);
+      */
+#else
+  
+    vtkNew<vtkAffineArray<vtkIdType>> polyVertex;
+    polyVertex->SetBackend(std::make_shared<vtkAffineImplicitBackend<vtkIdType>>(1, 0));
+    polyVertex->SetNumberOfTuples(N);
+    vtkNew<vtkCellArray> verts;
+    verts->SetData(1, polyVertex);
+    output->SetVerts(verts);
+#endif
     }
   return output;
   }

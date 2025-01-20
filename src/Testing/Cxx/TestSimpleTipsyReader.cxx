@@ -49,7 +49,7 @@ TestSimpleTipsyReader(int argc, char* argv[])
   args.AddArgument(
     "-type", vtksys::CommandLineArguments::SPACE_ARGUMENT, &partname, "(the name of the SCALAR variable to display)");
   args.AddArgument(
-    "-vis", vtksys::CommandLineArguments::NO_ARGUMENT, &vis, "(optional vis(ualization) with display)");
+    "-vis", vtksys::CommandLineArguments::NO_ARGUMENT, &vis, "(optional visualization) with display)");
 
   if ( !args.Parse() || argc == 1 || filein.empty())
     {

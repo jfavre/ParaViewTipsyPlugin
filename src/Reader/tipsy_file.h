@@ -81,15 +81,11 @@ struct header {
     int pad;
 };
 
-/*
-	Abstraction for whole Tipsy file
-*/
-
 class TipsyFile{
 public:
   //  Data
   header h;
-  gas_particle* sph;
+  gas_particle*  sph;
   dark_particle* dark;
   star_particle* star;
 
@@ -98,6 +94,10 @@ public:
   std::ifstream src;
   bool swap_endian;
   bool header_read;
+
+  const size_t static stride_of_gas_particle = sizeof(gas_particle)/sizeof(float);
+  const size_t static  stride_of_star_particle = sizeof(star_particle)/sizeof(float);
+  const size_t static  stride_of_dark_particle = sizeof(dark_particle)/sizeof(float);
 
   TipsyFile() { header_read = false; sph = nullptr; dark = nullptr; star = nullptr;}
 
@@ -111,6 +111,10 @@ public:
     FileOpen(filename, swap);
     }
 
+  const float* gas_ptr(){ return (const float*)sph;};
+  const float* dark_ptr(){ return (const float*)dark;};
+  const float* star_ptr(){ return (const float*)star;};
+  
   // Create a new tipsy file
   void create()
     {
@@ -261,57 +265,57 @@ void read_all(bool hasPad = true)
     if(swap_endian)
       {
 #ifdef USE_VTK_SWAP
-       vtkByteSwap::Swap4BERange(sph, h.nsph * sizeof(gas_particle)/sizeof(float));
+       vtkByteSwap::Swap4BERange(sph, h.nsph * stride_of_gas_particle);
 #else
-	  gas_particle* pp = sph;
-	  for(unsigned i = 0; i < h.nsph; i++, pp++)
-        {
-	    for(unsigned j = 0; j < sizeof(gas_particle)/sizeof(float); j++)
-		  byteswap(&((float*)pp)[j]);
-	    }
+       gas_particle* pp = sph;
+       for(auto i = 0; i < h.nsph; i++, pp++)
+         {
+         for(size_t j = 0; j < stride_of_gas_particle; j++)
+           byteswap(&((float*)pp)[j]);
+         }
 #endif
-	  }
+      }
     }
 
-	// Read dark
-	if(h.ndark)
-	{
-      src.seekg(h.nsph * sizeof(gas_particle) + base_offset, src.beg);
-	  src.read((char*)dark, h.ndark * sizeof(dark_particle));
-	  if(swap_endian)
-	    {
+// Read dark
+  if(h.ndark)
+    {
+    src.seekg(h.nsph * sizeof(gas_particle) + base_offset, src.beg);
+    src.read((char*)dark, h.ndark * sizeof(dark_particle));
+    if(swap_endian)
+      {
 #ifdef USE_VTK_SWAP
-       vtkByteSwap::Swap4BERange(dark, h.ndark * sizeof(dark_particle)/sizeof(float));
+      vtkByteSwap::Swap4BERange(dark, h.ndark * stride_of_dark_particle);
 #else
-	    dark_particle* pp = dark;
-	    for(unsigned i = 0; i < h.ndark; i++, pp++)
-	      {
-	      for(unsigned j = 0; j < sizeof(dark_particle)/sizeof(float); j++)
-		    byteswap(&((float*)pp)[j]);
-	      }
+      dark_particle* pp = dark;
+      for(auto i = 0; i < h.ndark; i++, pp++)
+        {
+        for(size_t j = 0; j < stride_of_dark_particle; j++)
+          byteswap(&((float*)pp)[j]);
+        }
 #endif
-	    }
-	}
+      }
+    }
 
-	// Read star
-	if(h.nstar)
-	{
-      src.seekg(h.nsph * sizeof(gas_particle) + h.ndark * sizeof(dark_particle) + base_offset, src.beg);
-	  src.read((char*)star, h.nstar * sizeof(star_particle));
-	  if(swap_endian)
-	    {
+// Read star
+  if(h.nstar)
+    {
+    src.seekg(h.nsph * sizeof(gas_particle) + h.ndark * sizeof(dark_particle) + base_offset, src.beg);
+    src.read((char*)star, h.nstar * sizeof(star_particle));
+    if(swap_endian)
+      {
 #ifdef USE_VTK_SWAP
-       vtkByteSwap::Swap4BERange(star, h.nstar * sizeof(star_particle)/sizeof(float));
+      vtkByteSwap::Swap4BERange(star, h.nstar * stride_of_star_particle);
 #else
-	    star_particle* pp = star;
-	    for(unsigned i = 0; i < h.nstar; i++, pp++)
-	      {
-	      for(unsigned j = 0; j < sizeof(star_particle)/sizeof(float); j++)
-		    byteswap(&((float*)pp)[j]);
-	      }
+      star_particle* pp = star;
+      for(auto i = 0; i < h.nstar; i++, pp++)
+        {
+        for(size_t j = 0; j < stride_of_star_particle; j++)
+          byteswap(&((float*)pp)[j]);
+        }
 #endif
-	    }
-	}
+      }
+    }
 
   std::cout << __LINE__ << ": TipsyFile: read file " << name
             << "\nnbodies: " << h.nbodies
@@ -339,10 +343,10 @@ int split_particlesSet(int N, int piece, int numPieces, int& standard_load)
   return load;
   }
 
-void read_gas_piece(int piece, int numPieces, int &n1, bool hasPad = true)
+void read_gas_piece(int piece, int numPieces, int &n1, [[maybe_unused]] bool hasPad = true)
   {
 // if n1 or n2 or n3 = 0, it means we do not read the particular type.
-  int load, standard_load[3]={0,0,0};
+  int standard_load[3]={0,0,0};
 
   if(!src.is_open())
     std::cerr << "TipsyFile: read_all(): file is not open\n";
@@ -379,9 +383,9 @@ void read_gas_piece(int piece, int numPieces, int &n1, bool hasPad = true)
        vtkByteSwap::Swap4BERange(sph, n1 * sizeof(gas_particle)/sizeof(float));
 #else
 	  gas_particle* pp = sph;
-	  for(unsigned i = 0; i < n1; i++, pp++)
+	  for(auto i = 0; i < n1; i++, pp++)
         {
-	    for(unsigned j = 0; j < sizeof(gas_particle)/sizeof(float); j++)
+	    for(size_t j = 0; j < sizeof(gas_particle)/sizeof(float); j++)
 		  byteswap(&((float*)pp)[j]);
 	    }
 #endif
@@ -418,10 +422,10 @@ void read_gas_piece(int piece, int numPieces, int &n1, bool hasPad = true)
             << "\nswapped endian: " << swap_endian << std::endl;
 } // read_gas_piece()
 
-void read_dark_matter_piece(int piece, int numPieces, int &n2, bool hasPad = true)
+void read_dark_matter_piece(int piece, int numPieces, int &n2, [[maybe_unused]] bool hasPad = true)
   {
 // if n1 or n2 or n3 = 0, it means we do not read the particular type.
-  int load, standard_load[3]={0,0,0};
+  int standard_load[3]={0,0,0};
 
   if(!src.is_open())
     std::cerr << "TipsyFile: read_all(): file is not open\n";
@@ -462,9 +466,9 @@ void read_dark_matter_piece(int piece, int numPieces, int &n2, bool hasPad = tru
      vtkByteSwap::Swap4BERange(dark, n2 * sizeof(dark_particle)/sizeof(float));
 #else
 	  dark_particle* pp = dark;
-	  for(unsigned i = 0; i < n2; i++, pp++)
+	  for(auto i = 0; i < n2; i++, pp++)
 	    {
-	    for(unsigned j = 0; j < sizeof(dark_particle)/sizeof(float); j++)
+	    for(size_t j = 0; j < sizeof(dark_particle)/sizeof(float); j++)
 	   byteswap(&((float*)pp)[j]);
 	    }
 #endif
@@ -472,10 +476,10 @@ void read_dark_matter_piece(int piece, int numPieces, int &n2, bool hasPad = tru
     }
 } // read_dark_matter_piece()
 
-void read_star_piece(int piece, int numPieces, int &n3, bool hasPad = true)
+void read_star_piece(int piece, int numPieces, int &n3, [[maybe_unused]] bool hasPad = true)
   {
 // if n1 or n2 or n3 = 0, it means we do not read the particular type.
-  int load, standard_load[3]={0,0,0};
+  int standard_load[3]={0,0,0};
 
   if(!src.is_open())
     std::cerr << "TipsyFile: read_all(): file is not open\n";
@@ -517,9 +521,9 @@ void read_star_piece(int piece, int numPieces, int &n3, bool hasPad = true)
      vtkByteSwap::Swap4BERange(star, n3 * sizeof(star_particle)/sizeof(float));
 #else
 	  star_particle* pp = star;
-	  for(unsigned i = 0; i < n3; i++, pp++)
+	  for(auto i = 0; i < n3; i++, pp++)
 	    {
-	    for(unsigned j = 0; j < sizeof(star_particle)/sizeof(float); j++)
+	    for(size_t j = 0; j < sizeof(star_particle)/sizeof(float); j++)
 	   byteswap(&((float*)pp)[j]);
 	    }
 #endif
@@ -527,14 +531,14 @@ void read_star_piece(int piece, int numPieces, int &n3, bool hasPad = true)
     }
 } // read_star_piece()
 
-void write(std::string name, bool hasPad = true)
+void write(std::string fileout, bool hasPad = true)
   {
 // Output file
-  std::ofstream out(name.c_str(), std::ios::binary);
+  std::ofstream out(fileout.c_str(), std::ios::binary);
 
   if(!out.is_open())
     {
-    std::cerr << "TipsyFile: write() could not open file " << name.c_str() << " for output.\n";
+    std::cerr << "TipsyFile: write() could not open file " << fileout.c_str() << " for output.\n";
     }
 
 // Header struct includes padding, if we dont want padding dont write the final int.
