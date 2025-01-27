@@ -3,7 +3,6 @@
 #include "tipsy_file.h"
 #include <vtkm/cont/DataSet.h>
 #include <vtkm/cont/ArrayCopy.h>
-#include <vtkm/cont/ArrayCopyDevice.h>
 #include <vtkm/cont/DataSetBuilderExplicit.h>
 #include <vtkm/cont/ArrayHandleExtractComponent.h>
 #include <vtkm/cont/ArrayHandleCompositeVector.h>
@@ -44,7 +43,7 @@ TestTipsyVTKmConvert(int argc, char* argv[])
   vtkm::cont::printSummary_ArrayHandle(coordsArray2, std::cout);
   std::cout << "--------------------------" << std::endl;
   vtkm::cont::ArrayHandle<vtkm::Vec3f>      positions2;
-  vtkm::cont::ArrayCopyDevice(coordsArray2, positions2);
+  vtkm::cont::ArrayCopy(coordsArray2, positions2);
   std::cout << "POSITIONS2 HANDLE" << std::endl;
   vtkm::cont::printSummary_ArrayHandle(positions2, std::cout);
   std::cout << "--------------------------" << std::endl;
@@ -102,11 +101,13 @@ TestTipsyVTKmConvert(int argc, char* argv[])
   //writer.SetFileTypeToBinary();
   //writer.WriteDataSet(dataSet);
 
+#define HISTSAMPLING 1
 #ifdef HISTSAMPLING
   /********** HistSampling *****************/
   using AssocType = vtkm::cont::Field::Association;
   vtkm::filter::resampling::HistSampling histsample;
   histsample.SetNumberOfBins(128);
+  histsample.SetSamplePercent(0.1);
   histsample.SetActiveField("rho", AssocType::Points);
   auto histsampleDataSet = histsample.Execute(dataSet);
   
@@ -115,6 +116,7 @@ TestTipsyVTKmConvert(int argc, char* argv[])
   histsampleWriter.WriteDataSet(histsampleDataSet);
 #endif
 
+#define PARTICLEDENSITY 1
 #ifdef PARTICLEDENSITY
   /********** ParticleDensityCloudInCell *****************/
   vtkm::Id3 cellDims = { 512,512,512 };
@@ -131,6 +133,7 @@ TestTipsyVTKmConvert(int argc, char* argv[])
   cicWriter.WriteDataSet(density);
 #endif
 
+#define VERTEXCLUSTERING 1
 #ifdef VERTEXCLUSTERING
   vtkm::filter::geometry_refinement::VertexClustering vertexClustering;
   vertexClustering.SetNumberOfDivisions(vtkm::Id3(128, 128, 128));
