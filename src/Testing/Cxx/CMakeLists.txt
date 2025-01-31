@@ -16,3 +16,8 @@ target_link_libraries(TestTipsyVTKmConvert
 	  vtkm::filter
 	  )
 
+add_executable(TipsyReadAndSwap TipsyReadAndSwap.cxx)
+target_link_libraries(TipsyReadAndSwap
+	PUBLIC IOTipsy
+	  )
+

@@ -170,7 +170,7 @@ vtkTipsyReader::GetVTKScalarArray(const char *name, unsigned int N, float *fp, u
   vtkarray->SetName(name);
   float *float_ptr = vtkarray->GetPointer(0);
   std::cout << __LINE__ << ": Allocating " << name << " array of size "<< N << "*"
-            << sizeof(float) << " bytes = " << N*sizeof(float) << " bytes\n";
+            << sizeof(float) << " bytes = " << N*sizeof(float)/1024 << " Kbytes\n";
 
   for(vtkIdType i=0; i < N; i++)
     {
@@ -192,7 +192,7 @@ vtkTipsyReader::GetVTKVectorArray(const char *name, unsigned int N, float *fp, u
   vtkarray->SetName(name);
   float *float_ptr = vtkarray->GetPointer(0);
   std::cout << __LINE__ << ": Allocating " << name << " vector-array of size "<< N << "*"
-            << sizeof(float) << " bytes = " << 3*N*sizeof(float) << " bytes\n";
+            << sizeof(float) << " Kbytes = " << 3*N*sizeof(float)/1024 << " Kbytes\n";
 
   for(vtkIdType i=0; i < N; i++)
     {
@@ -266,10 +266,9 @@ vtkPolyData* vtkTipsyReader::Read_Gas(int N)
 
   if (this->GenerateVertexCells)
     {
-    
     vtkIdList *id_list = vtkIdList::New();
-    std::cout << __LINE__ << ": Allocating ID list of size "<< N << "*"
-              << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType) << " bytes\n";
+    std::cout << __LINE__ << ": Allocating ID  list  of size "<< N << "*"
+              << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType)/1024 << " Kbytes\n";
     id_list->SetNumberOfIds(N);
     std::iota(id_list->GetPointer(0), id_list->GetPointer(N), 0);
     output->Allocate(1);
@@ -390,7 +389,7 @@ vtkPolyData *vtkTipsyReader::Read_Stars(int N)
     {
     vtkIdList *list = vtkIdList::New();
     std::cout << __LINE__ << ": Allocating ID list of size "<< N << "*"
-              << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType) << " bytes\n";
+              << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType)/1024 << " Kbytes\n";
     list->SetNumberOfIds(N);
     std::iota(list->GetPointer(0), list->GetPointer(N), 0);
     output->Allocate(1);

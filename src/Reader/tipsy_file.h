@@ -85,7 +85,7 @@ class TipsyFile{
 public:
   //  Data
   header h;
-  gas_particle*  sph;
+  gas_particle*   sph;
   dark_particle* dark;
   star_particle* star;
 
@@ -116,12 +116,13 @@ public:
   const float* star_ptr(){ return (const float*)star;};
   
   // Create a new tipsy file
-  void create()
-    {
-    // Set up header, particles, etc
-    // Also set 'swap endian'
-    }
+  //void create(){}
 
+  ~TipsyFile()
+    {
+    FileClose();
+    std::cout << "releasing all resources\n";
+    }
   void FileOpen(const char* filename, bool swap = false)
     {
     if(src.is_open())
@@ -139,29 +140,32 @@ public:
     {
     if(sph)
       {
-      free(sph);
-      //std::cout << "free(sph)...\n";
+      free(sph); sph = nullptr;
+      std::cout << "free(sph)...\n";
       }
     }
   void Free_Dark_Buffer()
     {
     if(dark)
       {
-      free(dark);
-      //std::cout << "free(dark)...\n";
+      free(dark); dark = nullptr;
+      std::cout << "free(dark)...\n";
       }
     }
   void Free_Star_Buffer()
     {
     if(star)
       {
-      free(star);
-      //std::cout << "free(star)...\n";
+      free(star); star = nullptr;
+      std::cout << "free(star)...\n";
       }
     }
 
   void FileClose()
     {
+    Free_Star_Buffer();
+    Free_Dark_Buffer();
+    Free_Sph_Buffer();
     if(src.is_open())
       src.close();
     }
@@ -238,9 +242,10 @@ void read_all(bool hasPad = true)
       read_header(hasPad);
     int base_offset = src.tellg();
     //std::cerr << __LINE__ << ": current_offset = " << src.tellg() << std::endl;
-// Alloc
-    if(h.nsph > 0)
+    if(h.nsph > 0){
       sph = (gas_particle*)malloc(h.nsph*sizeof(gas_particle));
+      std::cout << " allocating " << h.nsph  << " SPH  particles of size " << sizeof(gas_particle)  << " = " << h.nsph*sizeof(gas_particle)/1024 << " Kbytes\n";
+      }
 
     if(h.ndark > 0)
       dark = (dark_particle*)malloc(h.ndark*sizeof(dark_particle));
@@ -357,7 +362,7 @@ void read_gas_piece(int piece, int numPieces, int &n1, [[maybe_unused]] bool has
     {
     n1 = split_particlesSet(h.nsph, piece, numPieces, standard_load[0]);
     sph = (gas_particle*)malloc(n1 * sizeof(gas_particle));
-    //std::cerr << "CPU " << piece << " allocating " << n1  << " SPH  particles of size " << sizeof(gas_particle)  << "= " << n1*sizeof(gas_particle) << "\n";
+    std::cout << "CPU " << piece << " allocating " << n1  << " SPH  particles of size " << sizeof(gas_particle)  << " = " << n1*sizeof(gas_particle)/1024 << " Kbytes\n";
     }
   else n1=0;
 

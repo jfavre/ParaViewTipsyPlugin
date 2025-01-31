@@ -1,6 +1,8 @@
 #include <stddef.h>
 #include <iomanip>
 #include "tipsy_file.h"
+#include <vtkm/cont/Timer.h>
+
 #include <vtkm/cont/DataSet.h>
 #include <vtkm/cont/ArrayCopy.h>
 #include <vtkm/cont/DataSetBuilderExplicit.h>
@@ -15,6 +17,9 @@
 #include <vtkm/filter/resampling/HistSampling.h>
 #include <vtkm/filter/density_estimate/ParticleDensityCloudInCell.h>
 #include <vtkm/filter/geometry_refinement/VertexClustering.h>
+#include <vtkm/filter/density_estimate/NDHistogram.h>
+#include <vtkm/filter/entity_extraction/ExtractPoints.h>
+#include <vtkm/filter/entity_extraction/ThresholdPoints.h>
 
 int
 TestTipsyVTKmConvert(int argc, char* argv[])
@@ -59,17 +64,17 @@ TestTipsyVTKmConvert(int argc, char* argv[])
 
   vtkm::Bounds bounds1 = vtkm::cont::BoundsCompute(dataSet);
   std::cout << bounds1 << std::endl;
-  
+  /*
   vtkm::cont::ArrayHandleStride<vtkm::Float32> aos0(AOS, filein->h.nsph,
                                                          filein->stride_of_gas_particle,
                                                          offsetof(struct gas_particle, mass)/sizeof(float));
   dataSet.AddPointField("mass", aos0);
-  
+  */
   vtkm::cont::ArrayHandleStride<vtkm::Float32> aos7(AOS, filein->h.nsph,
                                                          filein->stride_of_gas_particle,
                                                          offsetof(struct gas_particle, rho)/sizeof(float));
   dataSet.AddPointField("rho", aos7);
-  
+  /*
   vtkm::cont::ArrayHandleStride<vtkm::Float32> aos8(AOS, filein->h.nsph,
                                                          filein->stride_of_gas_particle,
                                                          offsetof(struct gas_particle, temp)/sizeof(float));
@@ -79,29 +84,98 @@ TestTipsyVTKmConvert(int argc, char* argv[])
                                                          filein->stride_of_gas_particle,
                                                          offsetof(struct gas_particle, hsmooth)/sizeof(float));
   dataSet.AddPointField("hsmooth", aos9);
-  
+  */
+  /*
   vtkm::Id vel_offset = offsetof(struct gas_particle, vel)/sizeof(float);
   vtkm::cont::ArrayHandleStride<vtkm::Float32> vx (AOS, filein->h.nsph, filein->stride_of_gas_particle, vel_offset);
   vtkm::cont::ArrayHandleStride<vtkm::Float32> vy (AOS, filein->h.nsph, filein->stride_of_gas_particle, vel_offset+1);
   vtkm::cont::ArrayHandleStride<vtkm::Float32> vz (AOS, filein->h.nsph, filein->stride_of_gas_particle, vel_offset+2);
   auto velocity = vtkm::cont::make_ArrayHandleCompositeVector(vx, vy, vz);
   dataSet.AddPointField("velocity", velocity);
-  
-  std::cout << "dataSet summary--------------------------" << std::endl;
+  */
+  std::cout << "TIPSY dataSet summary--------------------------" << std::endl;
   dataSet.PrintSummary(std::cout);
   std::cout << "--------------------------" << std::endl;
+
   // Get the overall min/max of a field named "rho"
   vtkm::cont::ArrayHandle<vtkm::Range> rho = vtkm::cont::FieldRangeCompute(dataSet, "rho");
   std::cout << "range(rho) = " << rho.ReadPortal().Get(0) << std::endl;
-  vtkm::cont::ArrayHandle<vtkm::Range> temp = vtkm::cont::FieldRangeCompute(dataSet, "temp");
-  std::cout << "range(temp) = " << temp.ReadPortal().Get(0) << std::endl;
+  //vtkm::cont::ArrayHandle<vtkm::Range> temp = vtkm::cont::FieldRangeCompute(dataSet, "temp");
+  //std::cout << "range(temp) = " << temp.ReadPortal().Get(0) << std::endl;
   
   /* dataset is fully build. Can now save it to disk */
   //vtkm::io::VTKDataSetWriter writer(argv[2]);
   //writer.SetFileTypeToBinary();
   //writer.WriteDataSet(dataSet);
 
-#define HISTSAMPLING 1
+  vtkm::cont::Timer timer;
+#define TestingThresholdPoints 1
+#ifdef TestingThresholdPoints
+  timer.Start();
+  vtkm::filter::entity_extraction::ThresholdPoints thresholdPoints;
+  thresholdPoints.SetThresholdBetween(7.0f, 1000.0f);
+  thresholdPoints.SetActiveField("rho");
+  thresholdPoints.SetFieldsToPass("rho");
+  thresholdPoints.SetCompactPoints(true);
+  vtkm::cont::DataSet outputData = thresholdPoints.Execute(dataSet);
+  std::cout << "thresholdPoints.Execute : " << timer.GetElapsedTime() << " seconds"<< std::endl;
+  //vtkm::io::VTKDataSetWriter cspWriter("/dev/shm/thresholdPoints.vtk");
+  //cspWriter.SetFileTypeToBinary();
+  //cspWriter.WriteDataSet(outputData);
+#endif
+
+//#define TestingExtractPoints 1
+#ifdef TestingExtractPoints
+  /********** ndHistFilter *****************/
+  
+     // Implicit function
+  vtkm::Vec3f minPoint(-2.6f, -2.9f, -1.88f);
+  vtkm::Vec3f maxPoint(4.09f, 1.95f, 2.08f);
+  vtkm::Box box(minPoint, maxPoint);
+    
+  // Setup and run filter to extract by volume of interest
+  vtkm::filter::entity_extraction::ExtractPoints extractPoints;
+  extractPoints.SetImplicitFunction(box);
+  extractPoints.SetExtractInside(true);
+  extractPoints.SetCompactPoints(true);
+  vtkm::cont::DataSet outputData = extractPoints.Execute(dataSet);
+  
+  vtkm::io::VTKDataSetWriter cspWriter("/dev/shm/ExtractPoints.vtk");
+  cspWriter.SetFileTypeToBinary();
+  cspWriter.WriteDataSet(outputData);
+#endif
+
+//#define NDHISTOGRAM 1
+#ifdef NDHISTOGRAM
+  /********** ndHistFilter *****************/
+  vtkm::filter::density_estimate::NDHistogram ndHistFilter;
+  int nx = 128;
+  int ny = 128;
+  ndHistFilter.AddFieldAndBin("rho", nx);
+  ndHistFilter.AddFieldAndBin("temp", ny);
+  vtkm::cont::DataSet outputData = ndHistFilter.Execute(dataSet);
+  // before writing, we must add a coordsystem
+  /*
+  terminate called after throwing an instance of 'vtkm::cont::ErrorBadValue'
+  what():  DataSet has no coordinate system, which is not supported by VTK file format.
+  */
+  vtkm::Id3 dimensions(nx, ny,1);
+  vtkm::Vec3f origin(0., 0., 0.);
+  float spacing = 1.0/(nx-1.0);
+  vtkm::Vec3f Spacing(spacing, spacing, spacing);
+  vtkm::cont::ArrayHandleUniformPointCoordinates coords(dimensions, origin, Spacing);
+  vtkm::cont::CoordinateSystem cs("coords", coords);
+  outputData.AddCoordinateSystem(cs);
+  std::cout << "dataSet summary--------------------------" << std::endl;
+  outputData.PrintSummary(std::cout);
+  std::cout << "--------------------------" << std::endl;
+  
+  vtkm::io::VTKDataSetWriter cspWriter("/dev/shm/ndHistFilter.vtk");
+  cspWriter.SetFileTypeToBinary();
+  cspWriter.WriteDataSet(outputData);
+#endif
+
+//#define HISTSAMPLING 1
 #ifdef HISTSAMPLING
   /********** HistSampling *****************/
   using AssocType = vtkm::cont::Field::Association;
@@ -116,7 +190,7 @@ TestTipsyVTKmConvert(int argc, char* argv[])
   histsampleWriter.WriteDataSet(histsampleDataSet);
 #endif
 
-#define PARTICLEDENSITY 1
+//#define PARTICLEDENSITY 1
 #ifdef PARTICLEDENSITY
   /********** ParticleDensityCloudInCell *****************/
   vtkm::Id3 cellDims = { 512,512,512 };
@@ -133,7 +207,7 @@ TestTipsyVTKmConvert(int argc, char* argv[])
   cicWriter.WriteDataSet(density);
 #endif
 
-#define VERTEXCLUSTERING 1
+//#define VERTEXCLUSTERING 1
 #ifdef VERTEXCLUSTERING
   vtkm::filter::geometry_refinement::VertexClustering vertexClustering;
   vertexClustering.SetNumberOfDivisions(vtkm::Id3(128, 128, 128));
@@ -144,7 +218,7 @@ TestTipsyVTKmConvert(int argc, char* argv[])
   vcWriter.WriteDataSet(simplifiedCloud);
 #endif
 
-  delete filein;
+    delete filein;
   return 1;
 }
 

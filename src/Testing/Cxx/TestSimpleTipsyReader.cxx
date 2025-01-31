@@ -53,7 +53,7 @@ TestSimpleTipsyReader(int argc, char* argv[])
 
   if ( !args.Parse() || argc == 1 || filein.empty())
     {
-    cerr << "\nTestSimpleGadgetReader: Written by Jean M. Favre\n"
+    cerr << "\nTestSimpleTipsyReader: Written by Jean M. Favre\n"
          << "options are:\n";
     cerr << args.GetHelp() << "\n";
     return EXIT_FAILURE;
