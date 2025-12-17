@@ -7,13 +7,13 @@ target_link_libraries(TestSimpleTipsyReader
 	  VTK::RenderingOpenGL2
 	  )
 
-find_package(VTKm REQUIRED QUIET)
+find_package(Viskores REQUIRED QUIET)
 
 add_executable(TestTipsyVTKmConvert TestTipsyVTKmConvert.cxx)
 target_link_libraries(TestTipsyVTKmConvert
 	PUBLIC IOTipsy
-	  vtkm::io
-	  vtkm::filter
+	  viskores::io
+	  viskores::filter
 	  )
 
 add_executable(TipsyReadAndSwap TipsyReadAndSwap.cxx)

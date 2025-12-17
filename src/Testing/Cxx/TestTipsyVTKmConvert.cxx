@@ -1,229 +1,325 @@
 #include <stddef.h>
 #include <iomanip>
 #include "tipsy_file.h"
-#include <vtkm/cont/Timer.h>
+#include <viskores/cont/Timer.h>
 
-#include <vtkm/cont/DataSet.h>
-#include <vtkm/cont/ArrayCopy.h>
-#include <vtkm/cont/DataSetBuilderExplicit.h>
-#include <vtkm/cont/ArrayHandleExtractComponent.h>
-#include <vtkm/cont/ArrayHandleCompositeVector.h>
-#include <vtkm/cont/ArrayHandleStride.h>
-#include <vtkm/cont/ArrayHandleIndex.h>
-#include <vtkm/cont/FieldRangeCompute.h>
-#include <vtkm/cont/BoundsCompute.h>
-#include <vtkm/cont/Initialize.h>
-#include <vtkm/io/VTKDataSetWriter.h>
-#include <vtkm/filter/resampling/HistSampling.h>
-#include <vtkm/filter/density_estimate/ParticleDensityCloudInCell.h>
-#include <vtkm/filter/geometry_refinement/VertexClustering.h>
-#include <vtkm/filter/density_estimate/NDHistogram.h>
-#include <vtkm/filter/entity_extraction/ExtractPoints.h>
-#include <vtkm/filter/entity_extraction/ThresholdPoints.h>
+#include <viskores/cont/DataSet.h>
+#include <viskores/cont/ArrayCopy.h>
+#include <viskores/cont/DataSetBuilderExplicit.h>
+#include <viskores/cont/ArrayHandleExtractComponent.h>
+#include <viskores/cont/ArrayHandleCompositeVector.h>
+#include <viskores/cont/ArrayHandleStride.h>
+#include <viskores/cont/ArrayHandleIndex.h>
+#include <viskores/cont/FieldRangeCompute.h>
+#include <viskores/cont/BoundsCompute.h>
+#include <viskores/cont/Initialize.h>
+#include <viskores/io/VTKDataSetWriter.h>
+#include <viskores/filter/resampling/HistSampling.h>
+#include <viskores/filter/density_estimate/ParticleDensityCloudInCell.h>
+#include <viskores/filter/geometry_refinement/VertexClustering.h>
+#include <viskores/filter/density_estimate/NDHistogram.h>
+#include <viskores/filter/entity_extraction/ExtractPoints.h>
+#include <viskores/filter/entity_extraction/ThresholdPoints.h>
 
-int
-TestTipsyVTKmConvert(int argc, char* argv[])
+//#include <viskores/rendering/Actor.h>
+//#include <viskores/rendering/CanvasRayTracer.h>
+//#include <viskores/rendering/MapperRayTracer.h>
+//#include <viskores/rendering/Scene.h>
+//#include <viskores/rendering/View3D.h>
+
+viskores::cont::DataSet *
+TipsyToviskoresDataSet(TipsyFile *filein, bool write=false)
 {
-  vtkm::cont::DataSet dataSet;
+  viskores::cont::DataSet *dataSet = new viskores::cont::DataSet();
 
-  std::cout << "VTK-m::Initialize" << std::endl;
-
-  vtkm::cont::Initialize(argc, argv);
-
-  TipsyFile *filein = new TipsyFile(argv[1]);
-  filein->read_all();
-
-  vtkm::cont::DataSetBuilderExplicit dataSetBuilder;
-  auto AOS = vtkm::cont::make_ArrayHandle<vtkm::Float32>(filein->gas_ptr(),
+  viskores::cont::DataSetBuilderExplicit dataSetBuilder;
+  auto AOS = viskores::cont::make_ArrayHandle<viskores::Float32>(filein->gas_ptr(),
                                              filein->h.nsph * filein->stride_of_gas_particle,
-                                             vtkm::CopyFlag::Off);
+                                             viskores::CopyFlag::Off);
                                              
-  vtkm::Id pos_offset = offsetof(struct gas_particle, pos)/sizeof(float);
-  vtkm::cont::ArrayHandleStride<vtkm::Float32> pos_x (AOS, filein->h.nsph, filein->stride_of_gas_particle, pos_offset);
-  vtkm::cont::ArrayHandleStride<vtkm::Float32> pos_y (AOS, filein->h.nsph, filein->stride_of_gas_particle, pos_offset+1);
-  vtkm::cont::ArrayHandleStride<vtkm::Float32> pos_z (AOS, filein->h.nsph, filein->stride_of_gas_particle, pos_offset+2);
+  viskores::Id pos_offset = offsetof(struct gas_particle, pos)/sizeof(float);
+  viskores::cont::ArrayHandleStride<viskores::Float32> pos_x (AOS, filein->h.nsph, filein->stride_of_gas_particle, pos_offset);
+  viskores::cont::ArrayHandleStride<viskores::Float32> pos_y (AOS, filein->h.nsph, filein->stride_of_gas_particle, pos_offset+1);
+  viskores::cont::ArrayHandleStride<viskores::Float32> pos_z (AOS, filein->h.nsph, filein->stride_of_gas_particle, pos_offset+2);
 
-  auto coordsArray2 = vtkm::cont::make_ArrayHandleCompositeVector(pos_x, pos_y, pos_z);
+  auto coordsArray2 = viskores::cont::make_ArrayHandleCompositeVector(pos_x, pos_y, pos_z);
   std::cout << "COORDSARRAY2 HANDLE" << std::endl;
-  vtkm::cont::printSummary_ArrayHandle(coordsArray2, std::cout);
+  viskores::cont::printSummary_ArrayHandle(coordsArray2, std::cout);
   std::cout << "--------------------------" << std::endl;
-  vtkm::cont::ArrayHandle<vtkm::Vec3f>      positions2;
-  vtkm::cont::ArrayCopy(coordsArray2, positions2);
+  viskores::cont::ArrayHandle<viskores::Vec3f>      positions2;
+  viskores::cont::ArrayCopy(coordsArray2, positions2);
   std::cout << "POSITIONS2 HANDLE" << std::endl;
-  vtkm::cont::printSummary_ArrayHandle(positions2, std::cout);
+  viskores::cont::printSummary_ArrayHandle(positions2, std::cout);
   std::cout << "--------------------------" << std::endl;
 
-  vtkm::cont::ArrayHandle<vtkm::Id> connectivity;
-  vtkm::cont::ArrayCopy(vtkm::cont::make_ArrayHandleIndex(static_cast<vtkm::Id>(filein->h.nsph)), connectivity);
+  viskores::cont::ArrayHandle<viskores::Id> connectivity;
+  viskores::cont::ArrayCopy(viskores::cont::make_ArrayHandleIndex(static_cast<viskores::Id>(filein->h.nsph)), connectivity);
   
-  vtkm::IdComponent numberOfPointsPerCell = 1;
-  dataSet = dataSetBuilder.Create(positions2,
-                                  vtkm::CellShapeTagVertex(),
+  viskores::IdComponent numberOfPointsPerCell = 1;
+  *dataSet = dataSetBuilder.Create(positions2,
+                                  viskores::CellShapeTagVertex(),
                                   numberOfPointsPerCell,
                                   connectivity, "coords");
 
-  vtkm::Bounds bounds1 = vtkm::cont::BoundsCompute(dataSet);
+  viskores::Bounds bounds1 = viskores::cont::BoundsCompute(*dataSet);
   std::cout << bounds1 << std::endl;
   /*
-  vtkm::cont::ArrayHandleStride<vtkm::Float32> aos0(AOS, filein->h.nsph,
+  viskores::cont::ArrayHandleStride<viskores::Float32> aos0(AOS, filein->h.nsph,
                                                          filein->stride_of_gas_particle,
                                                          offsetof(struct gas_particle, mass)/sizeof(float));
   dataSet.AddPointField("mass", aos0);
   */
-  vtkm::cont::ArrayHandleStride<vtkm::Float32> aos7(AOS, filein->h.nsph,
+  viskores::cont::ArrayHandleStride<viskores::Float32> aos7(AOS, filein->h.nsph,
                                                          filein->stride_of_gas_particle,
                                                          offsetof(struct gas_particle, rho)/sizeof(float));
-  dataSet.AddPointField("rho", aos7);
-  /*
-  vtkm::cont::ArrayHandleStride<vtkm::Float32> aos8(AOS, filein->h.nsph,
+  dataSet->AddPointField("rho", aos7);
+
+  viskores::cont::ArrayHandleStride<viskores::Float32> aos8(AOS, filein->h.nsph,
                                                          filein->stride_of_gas_particle,
                                                          offsetof(struct gas_particle, temp)/sizeof(float));
-  dataSet.AddPointField("temp", aos8);
-  
-  vtkm::cont::ArrayHandleStride<vtkm::Float32> aos9(AOS, filein->h.nsph,
+  dataSet->AddPointField("temp", aos8);
+  /*
+  viskores::cont::ArrayHandleStride<viskores::Float32> aos9(AOS, filein->h.nsph,
                                                          filein->stride_of_gas_particle,
                                                          offsetof(struct gas_particle, hsmooth)/sizeof(float));
   dataSet.AddPointField("hsmooth", aos9);
   */
   /*
-  vtkm::Id vel_offset = offsetof(struct gas_particle, vel)/sizeof(float);
-  vtkm::cont::ArrayHandleStride<vtkm::Float32> vx (AOS, filein->h.nsph, filein->stride_of_gas_particle, vel_offset);
-  vtkm::cont::ArrayHandleStride<vtkm::Float32> vy (AOS, filein->h.nsph, filein->stride_of_gas_particle, vel_offset+1);
-  vtkm::cont::ArrayHandleStride<vtkm::Float32> vz (AOS, filein->h.nsph, filein->stride_of_gas_particle, vel_offset+2);
-  auto velocity = vtkm::cont::make_ArrayHandleCompositeVector(vx, vy, vz);
+  viskores::Id vel_offset = offsetof(struct gas_particle, vel)/sizeof(float);
+  viskores::cont::ArrayHandleStride<viskores::Float32> vx (AOS, filein->h.nsph, filein->stride_of_gas_particle, vel_offset);
+  viskores::cont::ArrayHandleStride<viskores::Float32> vy (AOS, filein->h.nsph, filein->stride_of_gas_particle, vel_offset+1);
+  viskores::cont::ArrayHandleStride<viskores::Float32> vz (AOS, filein->h.nsph, filein->stride_of_gas_particle, vel_offset+2);
+  auto velocity = viskores::cont::make_ArrayHandleCompositeVector(vx, vy, vz);
   dataSet.AddPointField("velocity", velocity);
   */
   std::cout << "TIPSY dataSet summary--------------------------" << std::endl;
-  dataSet.PrintSummary(std::cout);
+  dataSet->PrintSummary(std::cout);
   std::cout << "--------------------------" << std::endl;
 
   // Get the overall min/max of a field named "rho"
-  vtkm::cont::ArrayHandle<vtkm::Range> rho = vtkm::cont::FieldRangeCompute(dataSet, "rho");
-  std::cout << "range(rho) = " << rho.ReadPortal().Get(0) << std::endl;
-  //vtkm::cont::ArrayHandle<vtkm::Range> temp = vtkm::cont::FieldRangeCompute(dataSet, "temp");
+  viskores::cont::ArrayHandle<viskores::Range> rho = viskores::cont::FieldRangeCompute(*dataSet, "rho");
+  std::cout << "range(rho) = " << rho.ReadPortal().Get(0) << std::endl << std::endl;
+  //viskores::cont::ArrayHandle<viskores::Range> temp = viskores::cont::FieldRangeCompute(dataSet, "temp");
   //std::cout << "range(temp) = " << temp.ReadPortal().Get(0) << std::endl;
   
-  /* dataset is fully build. Can now save it to disk */
-  //vtkm::io::VTKDataSetWriter writer(argv[2]);
-  //writer.SetFileTypeToBinary();
-  //writer.WriteDataSet(dataSet);
-
-  vtkm::cont::Timer timer;
-#define TestingThresholdPoints 1
-#ifdef TestingThresholdPoints
+  if(write){
+    std::string fname = "/dev/shm/dataSet.vtk";
+    std::cout << "Writing: " << fname << std::endl;
+    viskores::io::VTKDataSetWriter writer(fname);
+    writer.SetFileTypeToBinary();
+    writer.WriteDataSet(*dataSet);
+  }
+  return dataSet;
+}
+  
+void TestingThresholdPoints(const viskores::cont::DataSet &dataSet, bool write=false)
+{
+  viskores::cont::Timer timer;
   timer.Start();
-  vtkm::filter::entity_extraction::ThresholdPoints thresholdPoints;
-  thresholdPoints.SetThresholdBetween(7.0f, 1000.0f);
+  viskores::filter::entity_extraction::ThresholdPoints thresholdPoints;
+  // this threshold range for /local/data/Tipsy/hr8799_bol_bd1.017300
+  thresholdPoints.SetThresholdBetween(1.15573e-7, 0.517376);
   thresholdPoints.SetActiveField("rho");
   thresholdPoints.SetFieldsToPass("rho");
   thresholdPoints.SetCompactPoints(true);
-  vtkm::cont::DataSet outputData = thresholdPoints.Execute(dataSet);
-  std::cout << "thresholdPoints.Execute : " << timer.GetElapsedTime() << " seconds"<< std::endl;
-  //vtkm::io::VTKDataSetWriter cspWriter("/dev/shm/thresholdPoints.vtk");
-  //cspWriter.SetFileTypeToBinary();
-  //cspWriter.WriteDataSet(outputData);
-#endif
-
-//#define TestingExtractPoints 1
-#ifdef TestingExtractPoints
-  /********** ndHistFilter *****************/
+  auto output = thresholdPoints.Execute(dataSet);
+  std::cout << "thresholdPoints.Execute :            " << timer.GetElapsedTime() << " seconds"<< std::endl;
   
-     // Implicit function
-  vtkm::Vec3f minPoint(-2.6f, -2.9f, -1.88f);
-  vtkm::Vec3f maxPoint(4.09f, 1.95f, 2.08f);
-  vtkm::Box box(minPoint, maxPoint);
+  if(write) {
+    std::string fname = "/dev/shm/thresholdPoints.vtk";
+    std::cout << "Writing: " << fname << std::endl;
+    viskores::io::VTKDataSetWriter writer(fname);
+    writer.SetFileTypeToBinary();
+    writer.WriteDataSet(output);
+  }
+}
+
+void TestingExtractPoints(const viskores::cont::DataSet dataSet, bool write=false)
+{
+  viskores::cont::Timer timer;
+  timer.Start();
+  viskores::Vec3f minPoint(-2.6f, -2.9f, -1.88f);
+  viskores::Vec3f maxPoint(4.09f, 1.95f, 2.08f);
+  viskores::Box box(minPoint, maxPoint);
     
   // Setup and run filter to extract by volume of interest
-  vtkm::filter::entity_extraction::ExtractPoints extractPoints;
+  viskores::filter::entity_extraction::ExtractPoints extractPoints;
   extractPoints.SetImplicitFunction(box);
   extractPoints.SetExtractInside(true);
   extractPoints.SetCompactPoints(true);
-  vtkm::cont::DataSet outputData = extractPoints.Execute(dataSet);
+  auto output = extractPoints.Execute(dataSet);
+  std::cout << "ExtractPoints.Execute :              " << timer.GetElapsedTime() << " seconds"<< std::endl;
   
-  vtkm::io::VTKDataSetWriter cspWriter("/dev/shm/ExtractPoints.vtk");
-  cspWriter.SetFileTypeToBinary();
-  cspWriter.WriteDataSet(outputData);
-#endif
+  if(write) {
+    std::string fname = "/dev/shm/ExtractPoints.vtk";
+    std::cout << "Writing: " << fname << std::endl;
+    viskores::io::VTKDataSetWriter writer(fname);
+    writer.SetFileTypeToBinary();
+    writer.WriteDataSet(output);
+  }
+}
 
-//#define NDHISTOGRAM 1
-#ifdef NDHISTOGRAM
-  /********** ndHistFilter *****************/
-  vtkm::filter::density_estimate::NDHistogram ndHistFilter;
+void TestingNDHistogram(const viskores::cont::DataSet &dataSet, bool write=false)
+{
+  viskores::cont::Timer timer;
+  timer.Start();
+  viskores::filter::density_estimate::NDHistogram ndHistFilter;
   int nx = 128;
   int ny = 128;
   ndHistFilter.AddFieldAndBin("rho", nx);
   ndHistFilter.AddFieldAndBin("temp", ny);
-  vtkm::cont::DataSet outputData = ndHistFilter.Execute(dataSet);
-  // before writing, we must add a coordsystem
-  /*
-  terminate called after throwing an instance of 'vtkm::cont::ErrorBadValue'
-  what():  DataSet has no coordinate system, which is not supported by VTK file format.
-  */
-  vtkm::Id3 dimensions(nx, ny,1);
-  vtkm::Vec3f origin(0., 0., 0.);
-  float spacing = 1.0/(nx-1.0);
-  vtkm::Vec3f Spacing(spacing, spacing, spacing);
-  vtkm::cont::ArrayHandleUniformPointCoordinates coords(dimensions, origin, Spacing);
-  vtkm::cont::CoordinateSystem cs("coords", coords);
-  outputData.AddCoordinateSystem(cs);
+  auto output = ndHistFilter.Execute(dataSet);
+  std::cout << "NDHistogram.Execute :                " << timer.GetElapsedTime() << " seconds"<< std::endl;
   std::cout << "dataSet summary--------------------------" << std::endl;
-  outputData.PrintSummary(std::cout);
+  output.PrintSummary(std::cout);
+  std::cout << "--------------------------" << std::endl<< std::endl;
+  /* does not make sense right now
+  if(write) {
+  // before writing, we must add a coordsystem
+  //terminate called after throwing an instance of 'viskores::cont::ErrorBadValue'
+  //what():  DataSet has no coordinate system, which is not supported by VTK file format.
+
+  viskores::Id3 dimensions(nx, ny,1);
+  viskores::Vec3f origin(0., 0., 0.);
+  float spacing = 1.0/(nx-1.0);
+  viskores::Vec3f Spacing(spacing, spacing, spacing);
+  viskores::cont::ArrayHandleUniformPointCoordinates coords(dimensions, origin, Spacing);
+  viskores::cont::CoordinateSystem cs("coords", coords);
+  output.AddCoordinateSystem(cs);
+  
+  viskores::cont::CellSetStructured<2> cellSet;
+  cellSet.SetPointDimensions(viskores::Id2(nx, ny));
+  output.SetCellSet(cellSet);
+  
+  std::cout << "dataSet summary--------------------------" << std::endl;
+  output.PrintSummary(std::cout);
   std::cout << "--------------------------" << std::endl;
-  
-  vtkm::io::VTKDataSetWriter cspWriter("/dev/shm/ndHistFilter.vtk");
-  cspWriter.SetFileTypeToBinary();
-  cspWriter.WriteDataSet(outputData);
-#endif
 
-//#define HISTSAMPLING 1
-#ifdef HISTSAMPLING
-  /********** HistSampling *****************/
-  using AssocType = vtkm::cont::Field::Association;
-  vtkm::filter::resampling::HistSampling histsample;
+    char *fname = "/dev/shm/ndHistFilter.vtk";
+    std::cout << "Writing: " << fname << std::endl;
+    viskores::io::VTKDataSetWriter writer(fname);
+    //writer.SetFileTypeToBinary();
+    writer.WriteDataSet(output);
+  }*/
+}
+
+void TestingHistSampling(const viskores::cont::DataSet &dataSet, bool write=false)
+{
+  viskores::cont::Timer timer;
+  timer.Start();
+  using AssocType = viskores::cont::Field::Association;
+  viskores::filter::resampling::HistSampling histsample;
   histsample.SetNumberOfBins(128);
-  histsample.SetSamplePercent(0.1);
+  histsample.SetSampleFraction(0.1);
   histsample.SetActiveField("rho", AssocType::Points);
-  auto histsampleDataSet = histsample.Execute(dataSet);
+  auto output = histsample.Execute(dataSet);
+  std::cout << "HistSampling.Execute :               " << timer.GetElapsedTime() << " seconds"<< std::endl;
   
-  vtkm::io::VTKDataSetWriter histsampleWriter("/dev/shm/histsample.vtk");
-  histsampleWriter.SetFileTypeToBinary();
-  histsampleWriter.WriteDataSet(histsampleDataSet);
-#endif
+  if(write) {
+    std::string fname = "/dev/shm/histsample.vtk";
+    std::cout << "Writing: " << fname << std::endl;
+    viskores::io::VTKDataSetWriter writer(fname);
+    writer.SetFileTypeToBinary();
+    writer.WriteDataSet(output);
+  }
+}
 
-//#define PARTICLEDENSITY 1
-#ifdef PARTICLEDENSITY
-  /********** ParticleDensityCloudInCell *****************/
-  vtkm::Id3 cellDims = { 512,512,512 };
+void TestingParticleDensityCloudInCell(const viskores::cont::DataSet &dataSet, bool write=false, bool render=false)
+{
+  viskores::cont::Timer timer;
+  timer.Start();
+  viskores::Id3 cellDims = { 511,511,511 };
 
-  vtkm::filter::density_estimate::ParticleDensityCloudInCell cic;
+  viskores::filter::density_estimate::ParticleDensityCloudInCell cic;
   cic.SetDimension(cellDims);
-  vtkm::Bounds bounds0(vtkm::Range(-200, 180), vtkm::Range(-266, 230), vtkm::Range(-150, 150));
+  viskores::Bounds bounds0(viskores::Range(-200, 180), viskores::Range(-266, 230), viskores::Range(-150, 150));
   cic.SetBounds(bounds0);
   cic.SetActiveField("rho");
-  auto density = cic.Execute(dataSet);
-  
-  vtkm::io::VTKDataSetWriter cicWriter("/dev/shm/ParticleDensityCloudInCell.vtk");
-  cicWriter.SetFileTypeToBinary();
-  cicWriter.WriteDataSet(density);
-#endif
+  cic.SetDivideByVolume(true);
+  cic.SetComputeNumberDensity(true);
+  auto output = cic.Execute(dataSet);
+  std::cout << "ParticleDensityCloudInCell.Execute : " << timer.GetElapsedTime() << " seconds"<< std::endl;
 
-//#define VERTEXCLUSTERING 1
-#ifdef VERTEXCLUSTERING
-  vtkm::filter::geometry_refinement::VertexClustering vertexClustering;
-  vertexClustering.SetNumberOfDivisions(vtkm::Id3(128, 128, 128));
+  if(write) {
+    std::string fname = "/dev/shm/ParticleDensityCloudInCell.vtk";
+    std::cout << "Writing: " << fname << std::endl;
+    viskores::io::VTKDataSetWriter writer(fname);
+    writer.SetFileTypeToBinary();
+    writer.WriteDataSet(output);
+  }
+  /*
+  if(render) {
+    std::string fname = "/dev/shm/ParticleDensityCloudInCell.png";
+    std::cout << "Rendering: " << fname << std::endl;
+  //Creating Actor
+  viskores::cont::ColorTable colorTable("viridis");
+  viskores::rendering::Actor actor(output.GetCellSet(),
+                               output.GetCoordinateSystem(),
+                               output.GetField("density"),
+                               colorTable);
 
-  auto simplifiedCloud = vertexClustering.Execute(dataSet);
-  vtkm::io::VTKDataSetWriter vcWriter("/dev/shm/vertexClustering.vtk");
-  vcWriter.SetFileTypeToBinary();
-  vcWriter.WriteDataSet(simplifiedCloud);
-#endif
+  //Creating Scene and adding Actor
+  viskores::rendering::Scene scene;
+  scene.AddActor(std::move(actor));
 
-    delete filein;
-  return 1;
+  //Creating and initializing the View using the Canvas, Ray Tracer Mappers, and Scene
+  viskores::rendering::MapperRayTracer mapper;
+  viskores::rendering::CanvasRayTracer canvas(1080, 1080);
+  viskores::rendering::View3D view(scene, mapper, canvas);
+
+  //Setting the background and foreground colors; optional.
+  view.SetBackgroundColor(viskores::rendering::Color(1.0f, 1.0f, 1.0f));
+  view.SetForegroundColor(viskores::rendering::Color(0.0f, 0.0f, 0.0f));
+
+  //Painting View
+  view.Paint();
+
+  //Saving View
+  view.SaveAs(fname);
+  }
+  */
+}
+
+void TestingVertexClustering(const viskores::cont::DataSet &dataSet, bool write=false)
+{
+  viskores::cont::Timer timer;
+  timer.Start();
+  viskores::filter::geometry_refinement::VertexClustering vertexClustering;
+  vertexClustering.SetNumberOfDivisions(viskores::Id3(128, 128, 128));
+
+  auto output = vertexClustering.Execute(dataSet);
+  std::cout << "VertexClustering.Execute :           " << timer.GetElapsedTime() << " seconds"<< std::endl;
+
+  if(write) {
+    std::string fname = "/dev/shm/vertexClustering.vtk";
+    std::cout << "Writing: " << fname << std::endl;
+    viskores::io::VTKDataSetWriter writer(fname);
+    writer.SetFileTypeToBinary();
+    writer.WriteDataSet(output);
+  }
 }
 
 int
 main(int argc, char* argv[])
 {
-  return TestTipsyVTKmConvert(argc, argv);
+  std::cout << "VTK-m::Initialize" << std::endl;
+  viskores::cont::Initialize(argc, argv);
+
+  TipsyFile *filein = new TipsyFile(argv[1]);
+  filein->read_all();
+  
+  viskores::cont::DataSet *dataSet = TipsyToviskoresDataSet(filein, false);
+  
+  //TestingThresholdPoints(*dataSet, true);
+  //TestingExtractPoints(*dataSet, false);
+  //TestingNDHistogram(*dataSet, true);
+  //TestingHistSampling(*dataSet, false);
+  TestingParticleDensityCloudInCell(*dataSet, true, true);
+  //TestingVertexClustering(*dataSet, false);
+  std::cout << std::endl;
+
+  delete dataSet;
+  delete filein;
+
+  return 1;
 }

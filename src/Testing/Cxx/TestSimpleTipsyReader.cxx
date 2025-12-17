@@ -25,7 +25,7 @@ VTK_MODULE_INIT(vtkInteractionStyle);
 
 #include <map>
 #include <string>
-
+#include <iostream>
 using namespace std;
 
 const vector<string> ptypes = {"gas", "dark", "star"};

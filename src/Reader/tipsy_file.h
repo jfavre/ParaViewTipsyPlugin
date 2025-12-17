@@ -121,7 +121,7 @@ public:
   ~TipsyFile()
     {
     FileClose();
-    std::cout << "releasing all resources\n";
+    std::cout << "TipsyReader: releasing all resources\n";
     }
   void FileOpen(const char* filename, bool swap = false)
     {
