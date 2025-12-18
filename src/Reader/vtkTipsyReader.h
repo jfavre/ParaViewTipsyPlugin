@@ -97,6 +97,7 @@ protected:
   vtkPolyData* Read_Gas(int N);
   vtkPolyData* Read_DarkMatter(int N);
   vtkPolyData* Read_Stars(int N);
+  void GenerateCells(vtkPolyData *output, int N);
   vtkFloatArray* GetVTKScalarArray(const char *name, unsigned int N, float *fp, unsigned int poffset);
   vtkFloatArray* GetVTKVectorArray(const char *name, unsigned int N, float *fp, unsigned int poffset);
   // Internal Variables

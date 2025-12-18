@@ -205,6 +205,40 @@ vtkTipsyReader::GetVTKVectorArray(const char *name, unsigned int N, float *fp, u
   return vtkarray;
 }
 
+void vtkTipsyReader::GenerateCells(vtkPolyData *output, int N)
+{
+  if (vtkVersion::GetVTKBuildVersion() >= 20251209L)
+    {
+    vtkNew<vtkAffineArray<vtkIdType>> polyVertex;
+    polyVertex->SetBackend(std::make_shared<vtkAffineImplicitBackend<vtkIdType>>(1, 0));
+    std::cout << "Using vtkAffineImplicitBackend\n";
+    polyVertex->SetNumberOfTuples(N);
+    vtkNew<vtkCellArray> verts;
+    verts->SetData(1, polyVertex);
+    output->SetVerts(verts);
+    }
+  else
+    {
+/*
+    vtkIdList *id_list = vtkIdList::New();
+    std::cout << __LINE__ << ": Allocating ID  list  of size "<< N << "*"
+              << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType)/1024 << " Kbytes\n";
+    id_list->SetNumberOfIds(N);
+    std::iota(id_list->GetPointer(0), id_list->GetPointer(N), 0);
+    output.Allocate(1);
+    output.InsertNextCell(VTK_POLY_VERTEX, id_list);
+    id_list->Delete();
+*/
+    std::cout << __LINE__ << ": Allocating std::vector of size "<< N << "*"
+              << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType) << " bytes\n";
+    std::vector<vtkIdType> polyVertex(N);
+    std::iota(polyVertex.begin(), polyVertex.end(), 0);
+    vtkNew<vtkCellArray> verts;
+    verts->InsertNextCell(N, polyVertex.data());
+    output->SetVerts(verts);
+    }
+}
+
 vtkPolyData* vtkTipsyReader::Read_Gas(int N)
 {
   if(N)
@@ -265,40 +299,8 @@ vtkPolyData* vtkTipsyReader::Read_Gas(int N)
     pd->AddArray(data); data->Delete();
     }
 
-  auto vtk_version = vtkVersion::GetVTKBuildVersion();
-
   if (this->GenerateVertexCells)
-    {
-    if (vtk_version >= 20251209L)
-      {
-      vtkNew<vtkAffineArray<vtkIdType>> polyVertex;
-      polyVertex->SetBackend(std::make_shared<vtkAffineImplicitBackend<vtkIdType>>(1, 0));
-      std::cout << "Using vtkAffineImplicitBackend\n";
-      polyVertex->SetNumberOfTuples(N);
-      vtkNew<vtkCellArray> verts;
-      verts->SetData(1, polyVertex);
-      output->SetVerts(verts);
-      }
-    else {
-    /*
-      vtkIdList *id_list = vtkIdList::New();
-      std::cout << __LINE__ << ": Allocating ID  list  of size "<< N << "*"
-                << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType)/1024 << " Kbytes\n";
-      id_list->SetNumberOfIds(N);
-      std::iota(id_list->GetPointer(0), id_list->GetPointer(N), 0);
-      output->Allocate(1);
-      output->InsertNextCell(VTK_POLY_VERTEX, id_list);
-      id_list->Delete();
-*/
-      std::cout << __LINE__ << ": Allocating std::vector of size "<< N << "*"
-              << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType) << " bytes\n";
-      std::vector<vtkIdType> polyVertex(N);
-      std::iota(polyVertex.begin(), polyVertex.end(), 0);
-      vtkNew<vtkCellArray> verts;
-      verts->InsertNextCell(N, polyVertex.data());
-      output->SetVerts(verts);
-      }
-    }
+    this->GenerateCells(output, N);
   return output;
   }
   else return nullptr;
@@ -339,16 +341,7 @@ vtkPolyData *vtkTipsyReader::Read_DarkMatter(int N)
     }
 
   if (this->GenerateVertexCells)
-    {
-    vtkIdList *list = vtkIdList::New();
-    std::cout << __LINE__ << ": Allocating ID list of size "<< N << "*"
-              << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType) << " bytes\n";
-    list->SetNumberOfIds(N);
-    std::iota(list->GetPointer(0), list->GetPointer(N), 0);
-    output->Allocate(1);
-    output->InsertNextCell(VTK_POLY_VERTEX, list);
-    list->Delete();
-    }
+    this->GenerateCells(output, N);
   return output;
   }
   else return nullptr;
@@ -390,16 +383,7 @@ vtkPolyData *vtkTipsyReader::Read_Stars(int N)
     }
 
   if (this->GenerateVertexCells)
-    {
-    vtkIdList *list = vtkIdList::New();
-    std::cout << __LINE__ << ": Allocating ID list of size "<< N << "*"
-              << sizeof(vtkIdType) << " bytes = " << N*sizeof(vtkIdType)/1024 << " Kbytes\n";
-    list->SetNumberOfIds(N);
-    std::iota(list->GetPointer(0), list->GetPointer(N), 0);
-    output->Allocate(1);
-    output->InsertNextCell(VTK_POLY_VERTEX, list);
-    list->Delete();
-    }
+    this->GenerateCells(output, N);
   return output;
   }
   else return nullptr;
