@@ -14,13 +14,11 @@ VTK_MODULE_INIT(vtkInteractionStyle);
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkPolyDataMapper.h"
-#include "vtkRegressionTestImage.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include <vtksys/CommandLineArguments.hxx>
 #include <vtksys/SystemTools.hxx>
-#include "vtkTestUtilities.h"
 #include "vtkUnstructuredGrid.h"
 
 #include <map>
@@ -97,9 +95,9 @@ TestSimpleTipsyReader(int argc, char* argv[])
     reader->SetPointArrayStatus(varname.c_str(), 1);
     }
   if(vis)
-    reader->GenerateVertexCellsOn();
+    reader->SetVertexCellsToPolyVertex();
   else
-    reader->GenerateVertexCellsOn();
+    reader->SetVertexCellsToNone();
   reader->UpdateTimeStep(TimeStep); // time value
   reader->Update();
 

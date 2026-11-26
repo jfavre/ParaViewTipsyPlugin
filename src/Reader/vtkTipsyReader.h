@@ -13,6 +13,8 @@
 #include "vtkIOTipsyModule.h" // for export macro
 
 #include "vtkPartitionedDataSetCollectionAlgorithm.h"
+#include "vtkSmartPointer.h"
+#include <cstddef>
 #include <string>
 #include <vector>
 #include <sstream>
@@ -25,7 +27,10 @@ class vtkPolyData;
 class vtkMultiProcessController;
 
 enum particleType :int {Gas=0, Dark=1, Star=2, All=3};
-static std::vector<std::string> ParticleTypes = {"Gas", "Dark", "Star"};
+static std::vector<std::string> ParticleTypes = {"Gas", "Dark", "Star", "All"};
+
+enum vertexCellType :int {NoCells=0, CellVertex=1, PolyVertex=2};
+static std::vector<std::string> VertexCellTypes = {"None", "Cell Vertex", "Poly Vertex"};
 
 class VTKIOTIPSY_EXPORT vtkTipsyReader : public vtkPartitionedDataSetCollectionAlgorithm
 {
@@ -38,10 +43,8 @@ public:
   vtkGetStringMacro(FileName);
 
   // Description:
-  // Set/Get the timestep to be read
-  vtkSetMacro(TimeStep,int);
-  vtkGetMacro(TimeStep,int);
-
+  // Set/Get the particle type to be read. The Tipsy format stores
+  // gas (SPH), dark matter and star particles in three consecutive sections.
   vtkSetClampMacro(ParticleType, int, particleType::Gas, particleType::All);
   vtkGetMacro(ParticleType, int);
   void SetParticleTypeToGas() { this->SetParticleType(particleType::Gas); }
@@ -50,15 +53,21 @@ public:
   void SetParticleTypeToAll() { this->SetParticleType(particleType::All); }
   
   // Description:
-  // When set (default no), the reader will generate a vertex cell
-  // for each point/particle read. When using the points directly
-  // this is unnecessary and time can be saved by omitting cell generation
-  // vtkPointSpriteMapper does not require them.
+  // Controls the cell generation of the particles/points read:
+  // NoCells    -- no cells are generated;
+  // CellVertex -- one VTK_VERTEX cell per particle/point;
+  // PolyVertex -- one VTK_POLY_VERTEX cell containing all particles/points.
+  // When using the points directly (vtkPointSpriteMapper) cell generation
+  // is unnecessary and time can be saved by omitting it ('NoCells').
   // When using ParaView, cell generation is recommended, without them
-  // many filter operations are unavailable
-  vtkSetMacro(GenerateVertexCells, int);
-  vtkGetMacro(GenerateVertexCells, int);
-  vtkBooleanMacro(GenerateVertexCells, int);
+  // many filter operations are unavailable. 'CellVertex' is the most
+  // common choice, 'PolyVertex' generates a single cell referencing
+  // all points (identical to vtkConvertToPointCloud::POLYVERTEX_CELL).
+  vtkSetClampMacro(VertexCells, int, vertexCellType::NoCells, vertexCellType::PolyVertex);
+  vtkGetMacro(VertexCells, int);
+  void SetVertexCellsToNone() { this->SetVertexCells(vertexCellType::NoCells); }
+  void SetVertexCellsToCellVertex() { this->SetVertexCells(vertexCellType::CellVertex); }
+  void SetVertexCellsToPolyVertex() { this->SetVertexCells(vertexCellType::PolyVertex); }
 
   int         GetNumberOfParticleTypeArrays() { return 3; }
 
@@ -86,35 +95,55 @@ public:
 #endif
     int CanReadFile(const char* fname);
 
+  // Description:
+  // Description of one floating point field inside a particle struct:
+  // its VTK array name, its offset inside the struct (in units of float)
+  // and its number of components. The per-particle-type tables guarantee
+  // that the GUI array list and the field extraction cannot disagree.
+  struct TipsyField
+  {
+    const char*  Name;
+    std::size_t  OffsetInFloats;
+    int          Components;
+  };
+
 protected:
-   vtkTipsyReader();
+  vtkTipsyReader();
   ~vtkTipsyReader() override;
   //
   int   RequestInformation(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
   int   RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *)  override;
   int   OpenFile();
   void  CloseFile();
-  vtkPolyData* Read_Gas(int N);
-  vtkPolyData* Read_DarkMatter(int N);
-  vtkPolyData* Read_Stars(int N);
-  void GenerateCells(vtkPolyData *output, int N);
-  vtkFloatArray* GetVTKScalarArray(const char *name, unsigned int N, float *fp, unsigned int poffset);
-  vtkFloatArray* GetVTKVectorArray(const char *name, unsigned int N, float *fp, unsigned int poffset);
+
+  // field tables, one per particle type, offsets computed with offsetof()
+  static const std::vector<TipsyField>& GasParticleFields();
+  static const std::vector<TipsyField>& DarkParticleFields();
+  static const std::vector<TipsyField>& StarParticleFields();
+
+  // build a vtkPolyData (points + selected fields + vertex cells) from
+  // N particles packed in a struct of size strideInFloats floats
+  vtkPolyData* BuildPolyData(const float *fp, std::size_t strideInFloats,
+                             const std::vector<TipsyField>& fields, vtkIdType N);
+  vtkPolyData* Read_Gas(vtkIdType N);
+  vtkPolyData* Read_DarkMatter(vtkIdType N);
+  vtkPolyData* Read_Stars(vtkIdType N);
+  void GenerateCells(vtkPolyData *output, vtkIdType N);
+  vtkSmartPointer<vtkFloatArray> GetVTKScalarArray(const char *name, vtkIdType N,
+      const float *fp, std::size_t strideInFloats);
+  vtkSmartPointer<vtkFloatArray> GetVTKVectorArray(const char *name, vtkIdType N,
+      const float *fp, std::size_t strideInFloats);
   // Internal Variables
   //
   char         *FileName;
   TipsyFile    *Tipsyfile;
-  int           TimeStep;
-  int           ActualTimeStep;
-  int           GenerateVertexCells;
-  vtkTimeStamp  FileModifiedTime;
-  vtkTimeStamp  FileOpenedTime;
+  // last-modification time of the file when it was opened, used to detect
+  // that the file changed on disk and must be reopened
+  double        FileOpenedMTime;
   int           UpdatePiece;
   int           UpdateNumPieces;
   int           ParticleType;
-
-  typedef std::vector<std::string>  stringlist;
-  std::vector<stringlist>           FieldArrays;
+  int           VertexCells;
 
   // To allow ParaView GUI to enable/disable scalar reading
   vtkDataArraySelection* PointDataArraySelection;

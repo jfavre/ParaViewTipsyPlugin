@@ -35,14 +35,20 @@
      </IntVectorProperty>
 
      <IntVectorProperty
-        name="GenerateVertexCells"
-        command="SetGenerateVertexCells"
+        name="VertexCells"
+        command="SetVertexCells"
         number_of_elements="1"
-        default_values="1"
-        label="GenerateVertexCells?">
-      <BooleanDomain name="bool" />
+        default_values="2"
+        label="Vertex cells">
+      <EnumerationDomain name="enum">
+        <Entry text="None"        value="0" />
+        <Entry text="Cell Vertex" value="1" />
+        <Entry text="Poly Vertex" value="2" />
+      </EnumerationDomain>
       <Documentation>
-            Will add a Poly-vertex cell.
+            Cell generation mode: 'None' generates no cells;
+            'Cell Vertex' adds one vertex cell per particle;
+            'Poly Vertex' adds a single poly-vertex cell referencing all particles.
       </Documentation>
      </IntVectorProperty>
      
@@ -99,7 +105,7 @@
       <ExposedProperties>
          <Property name="PointArrayStatus"/>
          <Property name="ParticleType"/>
-         <Property name="GenerateVertexCells"/>
+         <Property name="VertexCells"/>
       </ExposedProperties>
       </SubProxy>
 

@@ -7,5 +7,6 @@ paraview_add_plugin(pvTipsyReader
 
 option(BUILD_TESTING "Build Plugin Testing" OFF)
 if (BUILD_TESTING AND BUILD_SHARED_LIBS)
+  enable_testing()
   add_subdirectory(Testing)
 endif()
